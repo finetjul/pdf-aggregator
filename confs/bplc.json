@@ -1,21 +1,17 @@
 {
-  "old": {
+  "BPLC": {
     "bank-name": "BPLC",
-    "bank-pattern": "BANQUE POPULAIRE",
+    "bank-pattern": ["BANQUE POPULAIRE","Banque Populaire"],
     "account-type": "checking",
     "account-pattern": "VOTRE COMPTE CHEQUES N° (\\d*)",
-    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
-    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
-    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
-    "currency": "€"
-  },
-  "2018/06": {
-    "bank-name": "BPLC",
-    "bank-pattern": "Banque Populaire",
-    "account-type": "checking",
-    "account-pattern": "VOTRE COMPTE CHEQUES N° (\\d*)",
-    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
-    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "debit-pattern": [
+      "([\\d ]+\\,\\d{2})SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*?",
+      "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})"
+    ],
+    "credit-pattern": [
+      "([\\d ]+\\,\\d{2})SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*?",
+      "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})"
+    ],
     "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
     "currency": "€"
   },

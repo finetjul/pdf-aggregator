@@ -95,10 +95,7 @@ def find_conf(bank_extract, confs_path, verbose=0):
         find_conf(bank_extract, confs_path, verbose + 1)
     return None
 
-def parse_bank_extract(bank_extract, confs_path, verbose=0):
-    conf = find_conf(bank_extract, confs_path, verbose)
-    if conf is None:
-        return None
+def parse_bank_extract(bank_extract, conf, verbose=0):
     data = conf.copy()
     data.pop('bank-pattern', None)
     if "account-pattern" in conf:
@@ -160,7 +157,11 @@ def aggregate_pdf(pdf_path, confs_path="./confs", verbose=0):
         return accounts
     pdf_contents = tika.parser.from_file(pdf_path)
     bank_extract = pdf_contents['content']
-    data = parse_bank_extract(bank_extract, confs_path, verbose) if bank_extract else None
+
+    data = None
+    conf = find_conf(bank_extract, confs_path, verbose) if bank_extract else None
+    if conf is not None:
+        data = parse_bank_extract(bank_extract, conf, verbose)
     if data is None:
         print(pdf_path, "skipped")
     else:
