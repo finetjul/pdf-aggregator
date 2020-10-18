@@ -222,19 +222,26 @@ if __name__ == "__main__":
                         default=os.path.join(os.path.dirname(os.path.realpath(__file__)), "confs"))
     parser.add_argument("-o", "--output", help="output json file to store aggregated file",
                         default="accounts.json")
-    parser.add_argument("-v", "--verbose", action="count",
-                        help="increase output verbosity")
+    parser.add_argument("-v", "--verbose", action="count", default=0,
+                        help="increase output verbosity (0: none, 1: light...)")
+    parser.add_argument("--test", help="test regular expression on pdf (do not double backslash '\' here)")
 
     args = parser.parse_args()
 
-    if pathlib.Path(args.file_or_folder).is_file():
-        accounts = aggregate_pdf(args.file_or_folder, confs_path=args.confs, verbose=args.verbose)
+    if args.test:
+        pdf_contents = tika.parser.from_file(args.file_or_folder)
+        bank_extract = pdf_contents['content']
+        res = findall(args.test, bank_extract)
+        print("Apply '{}'\nResult: {}".format(args.test, res, bank_extract))
     else:
-        accounts = aggregate_pdfs(args.file_or_folder, confs_path=args.confs, verbose=args.verbose)
+        if pathlib.Path(args.file_or_folder).is_file():
+            accounts = aggregate_pdf(args.file_or_folder, confs_path=args.confs, verbose=args.verbose)
+        else:
+            accounts = aggregate_pdfs(args.file_or_folder, confs_path=args.confs, verbose=args.verbose)
 
-    accounts_json = toJSON(accounts)
-    if args.verbose > 0:
-        print(accounts_json)
+        accounts_json = toJSON(accounts)
+        if args.verbose > 0:
+            print(accounts_json)
 
-    with open(args.output, 'w') as accounts_json_file:
-        accounts_json_file.write(accounts_json)
+        with open(args.output, 'w') as accounts_json_file:
+            accounts_json_file.write(accounts_json)
