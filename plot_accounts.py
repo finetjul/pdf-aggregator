@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import mplcursors
 import numpy
+import pathlib
 # Use SortedDict (instead of OrderedDict) to bisect
 from sortedcontainers import SortedDict
 
@@ -146,21 +147,28 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
 
 
 if __name__ == "__main__":
-    import os
-    import pathlib
-    import sys
-    if len(sys.argv) != 2:
-        print("Usage: accounts_plotter.py [file or folder of summaries to plot]")
-        sys.exit(2)
-    accounts_path = sys.argv[1]
-    if pathlib.Path(accounts_path).is_file():
-        accounts = readAccounts(accounts_path)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("file_or_folder",
+                        help="a json file or a folder containing json files")
+    parser.add_argument("--ignore", nargs="+", default=[],
+                        help="Account type to ignore (e.g. -i loan -i real-estate")
+    parser.add_argument("--log", action="store_true",
+                        help="Use log scale")
+    parser.add_argument("--stack", action="store_true",
+                        help="Stack accounts")
+
+    args = parser.parse_args()
+
+    if pathlib.Path(args.file_or_folder).is_file():
+        accounts = readAccounts(args.file_or_folder)
     else:
         accounts = {}
-        for root, dirs, files in os.walk(accounts_path):
+        for root, dirs, files in os.walk(args.file_or_folder):
             for file in files:
                 accounts_file_path = os.path.join(root, file)
                 [stem, ext] = os.path.splitext(accounts_file_path)
                 if ext == '.json':
                     accounts.update(readAccounts(accounts_file_path))
-    plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False)
+
+    plotAccounts(accounts, ignored_categories=args.ignore, log_scale=args.log, stacked=args.stack)
