@@ -1,0 +1,14 @@
+{
+  "ING": {
+    "bank-name": "ING",
+    "bank-pattern": "ING Bank",
+    "account-type": "checking",
+    "account-pattern": "N° du Compte Courant : (\\d*)",
+    "balance-pattern": [
+      "Nouveau solde au \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\n\\n(?:[\\d ]+\\,\\d{2}) ([\\d ]+)\\,(\\d{2})",
+      "Nouveau solde au \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d ([\\d ]+)\\,(\\d{2})"
+    ],
+    "date-pattern": "Nouveau solde au (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
+    "currency": "€"
+  }
+}

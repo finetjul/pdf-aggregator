@@ -1,0 +1,76 @@
+{
+  "old": {
+    "bank-name": "BPLC",
+    "bank-pattern": "BANQUE POPULAIRE",
+    "account-type": "checking",
+    "account-pattern": "VOTRE COMPTE CHEQUES N° (\\d*)",
+    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
+    "currency": "€"
+  },
+  "2018/06": {
+    "bank-name": "BPLC",
+    "bank-pattern": "Banque Populaire",
+    "account-type": "checking",
+    "account-pattern": "VOTRE COMPTE CHEQUES N° (\\d*)",
+    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
+    "currency": "€"
+  },
+  "CEL": {
+    "bank-name": "BPLC",
+    "bank-pattern": "Banque Populaire",
+    "account-type": "saving",
+    "account-pattern": "VOTRE CPTE. EPARGNE LOGT.",
+    "account-value": "CEL",
+    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
+    "currency": "€"
+  },
+  "PEL": {
+    "bank-name": "BPLC",
+    "bank-pattern": "Banque Populaire",
+    "account-type": "saving",
+    "account-pattern": "VOTRE PLAN EPARGNE LOGT",
+    "account-value": "PEL",
+    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
+    "currency": "€"
+  },
+  "LIVRET A": {
+    "bank-name": "BPLC",
+    "bank-pattern": "Banque Populaire",
+    "account-type": "saving",
+    "account-pattern": "VOTRE LIVRET A N° (\\d*)",
+    "account-value": "Livret A",
+    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
+    "currency": "€"
+  },
+  "Codevair": {
+    "bank-name": "BPLC",
+    "bank-pattern": "Banque Populaire",
+    "account-type": "saving",
+    "account-pattern": "VOTRE COMPTE SUR LIVRET N° (\\d*)",
+    "account-value": "Codevair",
+    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
+    "currency": "€"
+  },
+  "Assurance Vie": {
+    "bank-name": "BPLC",
+    "bank-pattern": "BPCE Vie",
+    "account-type": "life-insurance",
+    "account-pattern": "Votre contrat : (.*)",
+    "account-value": "Assurance Vie: {}",
+    "balance-pattern": "Montant de votre épargne au \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d : ([\\d ]+)\\,(\\d{2}) EUR",
+    "date-pattern": "Montant de votre épargne au (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
+    "currency": "€"
+  }
+}

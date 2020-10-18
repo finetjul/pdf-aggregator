@@ -1,0 +1,11 @@
+{
+  "Yomoni": {
+    "bank-name": "Yomoni",
+    "bank-pattern": "Yomoni",
+    "account-type": "life-insurance",
+    "account-pattern": "Votre\\s+n\\°\\s+de\\s+contrat\\s\\:\\s+n\\°(.*)",
+    "balance-pattern": "T\\s *otal\\s+portef\\s*euille\\s([\\d\\s]+)\\,(\\d{1})\\s+€",
+    "date-pattern": "Au\\s+(\\d\\d)/(\\d\\d)/(\\d\\d\\d\\d)",
+    "currency": "€"
+  }
+}
