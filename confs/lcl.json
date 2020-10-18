@@ -1,0 +1,11 @@
+{
+  "LCL": {
+    "bank-name": "LCL",
+    "bank-pattern": "Crédit Lyonnais",
+    "account-type": "checking",
+    "account-pattern": "IBAN : (.*)",
+    "balance-pattern": "SOLDE EN EUROS +([\\d ]+)\\,(\\d{2})",
+    "date-pattern": "du \\d\\d\\.\\d\\d\\.\\d\\d\\d\\d au (\\d\\d)\\.(\\d\\d)\\.(\\d\\d\\d\\d)",
+    "currency": "€"
+  }
+}
