@@ -5,7 +5,7 @@ import json
 import os
 import pathlib
 import re
-from tika import parser
+import tika.parser
 
 debug = False
 
@@ -76,7 +76,7 @@ def findall(pattern, text):
         if match:
             return match
 
-def find_conf(bank_extract, confs_path, verbose=False):
+def find_conf(bank_extract, confs_path, verbose=0):
     for conf_file_path in get_conf_files(confs_path):
         confs = read_confs(conf_file_path)
         for conf_name in confs.keys():
@@ -87,16 +87,15 @@ def find_conf(bank_extract, confs_path, verbose=False):
                         for pattern in mandatory_patterns if pattern in conf]
             if all(searches):
                 return conf
-            elif verbose:
-                print(conf, searches, bank_extract)
-    if debug and not verbose:
-        find_conf(bank_extract, confs_path, True)
+            elif verbose == 3:
+                print("************\n{}():  Conf does not match bank extract\n"
+                      "  Conf: {}\n  Search results: {}\n  Bank extract: {}".format(
+                    find_conf.__name__, conf, searches, bank_extract))
+    if verbose == 2:
+        find_conf(bank_extract, confs_path, verbose + 1)
     return None
 
-def parse_bank_extract(bank_extract, confs_path):
-    conf = find_conf(bank_extract, confs_path)
-    if conf is None:
-        return None
+def parse_bank_extract(bank_extract, conf, verbose=0):
     data = conf.copy()
     data.pop('bank-pattern', None)
     if "account-pattern" in conf:
@@ -107,14 +106,14 @@ def parse_bank_extract(bank_extract, confs_path):
         data['account'] = re.sub(r"\s+", '', data['account'])
         data.pop('account-pattern', None)
         data.pop('account-value', None)
-    else:
+    elif verbose > 0:
         print('no account-pattern')
     if "balance-pattern" in conf:
         balance = findall(conf["balance-pattern"], bank_extract)
         if balance:
             balance_value = conf.get("balance-value", "{}.{}").format(*balance[-1])
             data['balance'] = float(re.sub(r"\s+", '', balance_value))
-        else:
+        elif verbose > 0:
             print("balance not found", bank_extract)
         data.pop('balance-pattern', None)
         data.pop('balance-value', None)
@@ -128,51 +127,74 @@ def parse_bank_extract(bank_extract, confs_path):
                 data['balance'] = -float(re.sub(r"\s+", '', debit[-1]).replace(",", "."))
             else:
                 print("debit not found")
-        else:
+        elif verbose > 0:
             print("credit not found")
         data.pop('credit-pattern', None)
         data.pop('credit-value', None)
         data.pop('debit-pattern', None)
         data.pop('debit-value', None)
-    else:
+    elif verbose > 0:
         print('no credit-pattern')
     if "date-pattern" in conf:
         date = findall(conf["date-pattern"], bank_extract)
         if date:
             date_value = conf.get("date-value", "{2}-{1}-{0}").format(*date[-1])
             data['date'] = dateutil.parser.parse(date_value).date()
-        else:
+        elif verbose > 0:
             print("date not found")
         data.pop('date-pattern', None)
         data.pop('date-value', None)
-    else:
+    elif verbose > 0:
         print('no date-pattern')
         print(conf)
     return data
 
-def extract(folder_path, confs_path="./confs"):
+def aggregate_pdf(pdf_path, confs_path="./confs", verbose=0):
+    accounts = collections.defaultdict(lambda: collections.defaultdict(dict))
+
+    [stem, ext] = os.path.splitext(pdf_path)
+    if ext != '.pdf':
+        return accounts
+    pdf_contents = tika.parser.from_file(pdf_path)
+    bank_extract = pdf_contents['content']
+
+    data = None
+    conf = find_conf(bank_extract, confs_path, verbose) if bank_extract else None
+    if conf is not None:
+        data = parse_bank_extract(bank_extract, conf, verbose)
+    if data is None:
+        print(pdf_path, "skipped")
+    else:
+        if 'date' in data and 'balance' in data:
+            if verbose > 0:
+                print(pdf_path, data['date'], data['balance'])
+            account_id = "-".join([data['bank-name'], data['account']])
+            account = accounts[account_id]['account']
+            accounts[account_id]['balances'].update({
+                data['date']: data['balance']
+            })
+            del data['date']
+            del data['balance']
+            account.update(data)
+    return accounts
+
+def aggregate_pdfs(folder_path, confs_path="./confs", verbose=0):
+
+    def update(d, u):
+        """ Recursive dictionary update() """
+        for k, v in u.items():
+            if isinstance(v, dict):
+                d[k] = update(d[k], v)
+            else:
+                d[k] = v
+        return d
+
     accounts = collections.defaultdict(lambda: collections.defaultdict(dict))
     for root, dirs, files in os.walk(folder_path):
         for file in files:
             path_to_pdf = os.path.join(root, file)
-            [stem, ext] = os.path.splitext(path_to_pdf)
-            if ext == '.pdf':
-                pdf_contents = parser.from_file(path_to_pdf)
-                bank_extract = pdf_contents['content']
-                data = parse_bank_extract(bank_extract, confs_path) if bank_extract else None
-                if data is None:
-                    print(path_to_pdf, "skipped")
-                else:
-                    if 'date' in data and 'balance' in data:
-                        print(path_to_pdf, data['date'], data['balance'])
-                        account_id = "-".join([data['bank-name'], data['account']])
-                        account = accounts[account_id]['account']
-                        accounts[account_id]['balances'].update({
-                            data['date']: data['balance']
-                        })
-                        del data['date']
-                        del data['balance']
-                        account.update(data)
+            pdf_accounts = aggregate_pdf(path_to_pdf, confs_path, verbose)
+            update(accounts, pdf_accounts)
 
     return accounts
 
@@ -192,15 +214,34 @@ def toJSON(accounts):
     return json.dumps(iso_accounts, indent = 2)
 
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) != 2:
-        print("Usage: folder to extract")
-        sys.exit(2)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("file_or_folder",
+                        help="a pdf file or a folder containing pdf files")
+    parser.add_argument("-c", "--confs", help="folder to find conf files",
+                        default=os.path.join(os.path.dirname(os.path.realpath(__file__)), "confs"))
+    parser.add_argument("-o", "--output", help="output json file to store aggregated file",
+                        default="accounts.json")
+    parser.add_argument("-v", "--verbose", action="count", default=0,
+                        help="increase output verbosity (0: none, 1: light...)")
+    parser.add_argument("--test", help="test regular expression on pdf (do not double backslash '\' here)")
 
-    accounts = extract(sys.argv[1])
+    args = parser.parse_args()
 
-    accounts_json = toJSON(accounts)
-    print(accounts_json)
-    output_file = sys.argv[2] if len(sys.argv) >= 3 else "accounts.json"
-    with open(output_file, 'w') as accounts_json_file:
-        accounts_json_file.write(accounts_json)
+    if args.test:
+        pdf_contents = tika.parser.from_file(args.file_or_folder)
+        bank_extract = pdf_contents['content']
+        res = findall(args.test, bank_extract)
+        print("Apply '{}'\nResult: {}".format(args.test, res, bank_extract))
+    else:
+        if pathlib.Path(args.file_or_folder).is_file():
+            accounts = aggregate_pdf(args.file_or_folder, confs_path=args.confs, verbose=args.verbose)
+        else:
+            accounts = aggregate_pdfs(args.file_or_folder, confs_path=args.confs, verbose=args.verbose)
+
+        accounts_json = toJSON(accounts)
+        if args.verbose > 0:
+            print(accounts_json)
+
+        with open(args.output, 'w') as accounts_json_file:
+            accounts_json_file.write(accounts_json)
