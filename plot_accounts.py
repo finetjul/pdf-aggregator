@@ -3,6 +3,7 @@ import datetime
 import dateutil.parser
 import json
 import matplotlib.cm as cm
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import mplcursors
@@ -142,6 +143,12 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
     if not stacked:
         mplcursors.cursor().connect(
             "add", lambda sel: sel.annotation.set_text(sel.artist.get_label()))
+
+        # format the coords message box
+        plt.gca().format_xdata = mdates.DateFormatter('%Y-%m-%d')
+        plt.gca().format_ydata = lambda x: '%1.2f' % x  # format the price.
+
+        plt.gca().grid(True)
 
     plt.show()
 
