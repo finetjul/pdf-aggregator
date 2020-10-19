@@ -14,24 +14,28 @@ pip install -r requirements.txt
 Scan PDF files and aggregate financial data into an accounts.json summary file:
 
 ```
-python aggregate_accounts.py path/to/folder/with/PDF
+python aggregate.py path/to/folder/with/PDF
 ```
 
 or
 
 ```
-python aggregate_accounts.py path/to/file.pdf
+python aggregate.py path/to/file.pdf
 ```
+
+```--help``` for more options.
 
 ### Plot
 Plot aggregated data:
 
 ```
-python plot_accounts.py path/to/folder/with/multiple/accounts.json
+python plot.py path/to/folder/with/multiple/accounts.json
 ```
 
 or
 
 ```
-python plot_accounts.py path/to/accounts.json
+python plot.py path/to/accounts.json
 ```
+
+```--help``` for more options.
