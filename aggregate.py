@@ -5,6 +5,7 @@ import json
 import os
 import pathlib
 import re
+import sys
 import tika.parser
 
 debug = False
@@ -84,10 +85,11 @@ def parse_pdf(file_path):
     pdf_contents = tika.parser.from_file(file_path)
     return pdf_contents['content']
 
-def find_conf(file_path, confs_path, verbose=0):
+def find_confs(file_path, confs_path, verbose=0):
     bank_extract = parse_pdf(file_path)
+    matching_confs = []
     if not bank_extract:
-        return None
+        return matching_confs
     for conf_file_path in get_conf_files(confs_path):
         confs = read_confs(conf_file_path)
         for conf_name in confs.keys():
@@ -97,14 +99,15 @@ def find_conf(file_path, confs_path, verbose=0):
             searches = [search(conf[pattern], bank_extract)
                         for pattern in mandatory_patterns if pattern in conf]
             if all(searches):
-                return conf
-            elif verbose == 3:
+                matching_confs.append(conf)
+                continue
+            if verbose == 3:
                 print("************\n{}():  Conf does not match bank extract\n"
                       "  Conf: {}\n  Search results: {}\n  Bank extract: {}".format(
                     find_conf.__name__, conf, searches, bank_extract))
-    if verbose == 2:
-        find_conf(bank_extract, confs_path, verbose + 1)
-    return None
+    if len(matching_confs) == 0 and verbose == 2:
+        matching_confs = find_confs(bank_extract, confs_path, verbose + 1)
+    return matching_confs
 
 def parse_bank_extract(file_path, conf, verbose=0):
     bank_extract = parse_pdf(file_path)
@@ -116,7 +119,7 @@ def parse_bank_extract(file_path, conf, verbose=0):
         if account:
             account_value = conf.get('account-value', "{}")
             data['account'] = account_value.format(*account.groups())
-        data['account'] = re.sub(r"\s+", '', data['account'])
+        #data['account'] = re.sub(r"\s+", '', data['account'])
         data.pop('account-pattern', None)
         data.pop('account-value', None)
     elif verbose > 0:
@@ -167,15 +170,12 @@ def aggregate_pdf(file_path, confs_path="./confs", verbose=0):
     accounts = collections.defaultdict(lambda: collections.defaultdict(dict))
 
     data = None
-    conf = find_conf(file_path, confs_path, verbose)
-    if conf is not None:
+    confs = find_confs(file_path, confs_path, verbose)
+    for conf in confs:
         data = parse_bank_extract(file_path, conf, verbose)
-    if data is None:
-        print(pdf_path, "skipped")
-    else:
-        if 'date' in data and 'balance' in data:
+        if data is not None and 'date' in data and 'balance' in data:
             if verbose > 0:
-                print(pdf_path, data['date'], data['balance'])
+                print(file_path, data['date'], data['balance'])
             account_id = "-".join([data['bank-name'], data['account']])
             account = accounts[account_id]['account']
             accounts[account_id]['balances'].update({
@@ -184,6 +184,8 @@ def aggregate_pdf(file_path, confs_path="./confs", verbose=0):
             del data['date']
             del data['balance']
             account.update(data)
+    if len(accounts) == 0:
+        print(file_path, "skipped", file=sys.stderr)
     return accounts
 
 def aggregate_pdfs(folder_path, confs_path="./confs", verbose=0):
