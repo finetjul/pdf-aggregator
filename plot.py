@@ -155,6 +155,8 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
 
 if __name__ == "__main__":
     import argparse
+    import os
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file_or_folder",
                         help="a json file or a folder containing json files")

@@ -80,7 +80,7 @@ def findall(pattern, text):
 def parse_pdf(file_path):
     [stem, ext] = os.path.splitext(file_path)
     if ext != '.pdf':
-        return accounts
+        return None
     pdf_contents = tika.parser.from_file(file_path)
     return pdf_contents['content']
 
