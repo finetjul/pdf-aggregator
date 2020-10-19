@@ -1,6 +1,7 @@
 # PDF aggregator
 
-Aggregate account PDF statements into JSON and plot aggregated financial data.
+Aggregate account PDF statements into JSON and visualize aggregated financial data as timeline.
+Works offline and relies on [tika](https://tika.apache.org/) for PDF parsing and [matplotlib](https://matplotlib.org/) for plotting.
 
 ## Installation
 
