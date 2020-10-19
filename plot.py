@@ -55,7 +55,6 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
 
         for account_id in accounts.keys():
             act = accounts[account_id].get('account', {}).get('account-type')
-            print(account_id, act)
             if act == account_type or (account_type == 'other' and
                act not in account_types and act not in ignored_categories):
                 grouped_accounts.setdefault(account_type, {})[account_id] = accounts[account_id]
@@ -86,12 +85,15 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
             x, y = zip(*sorted_balances.items())
 
             if not stacked:
+                is_last_type = type_index == len(grouped_accounts) - 1
+                offset_sign = -1 if is_last_type else 1
                 color_index = type_index
                 if len(grouped_accounts[account_type]) > 1:
-                    color_index += 0.5 * account_index / (len(grouped_accounts[account_type])-1)
+                    color_index += offset_sign * 0.5 * account_index / (len(grouped_accounts[account_type])-1)
 
                 if len(grouped_accounts) > 1:
-                    color_index /= len(grouped_accounts) - 1
+                    color_index /= (len(grouped_accounts) - 1)
+                print(color_index)
                 c = cm.rainbow(color_index)
 
                 plots += plt.plot(x, y, color=c, label=account_id)
@@ -100,10 +102,12 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
         type_index += 1
 
     # Total
+    last_day = sorted_dates.keys()[-1]
     for day in sorted_dates:
         all = []
         for accounts in grouped_balances.values():
-            for balances in accounts.values():
+            for account_id in accounts.keys():
+                balances = accounts[account_id]
                 # 0 if day is before first account entry
                 if balances.keys()[0] <= day:
                     index = balances.bisect(day)
@@ -111,9 +115,13 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
                     index -= 1
                     key = balances.iloc[index]
                     all.append(balances[key])
-                else:
-                    all.append(0)
+                    if day == last_day:
+                        print(account_id, balances[key])
+                #else:
+                #    all.append(None)
         sorted_dates[day] = all if stacked else sum(all)
+        if day == last_day:
+            print('Total', sum(all))
     if stacked:
         fig, ax = plt.subplots()
         number_of_accounts = len(next(iter(sorted_dates.values())))
