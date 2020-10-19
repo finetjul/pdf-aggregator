@@ -76,7 +76,18 @@ def findall(pattern, text):
         if match:
             return match
 
-def find_conf(bank_extract, confs_path, verbose=0):
+@memoize
+def parse_pdf(file_path):
+    [stem, ext] = os.path.splitext(file_path)
+    if ext != '.pdf':
+        return accounts
+    pdf_contents = tika.parser.from_file(file_path)
+    return pdf_contents['content']
+
+def find_conf(file_path, confs_path, verbose=0):
+    bank_extract = parse_pdf(file_path)
+    if not bank_extract:
+        return None
     for conf_file_path in get_conf_files(confs_path):
         confs = read_confs(conf_file_path)
         for conf_name in confs.keys():
@@ -95,7 +106,9 @@ def find_conf(bank_extract, confs_path, verbose=0):
         find_conf(bank_extract, confs_path, verbose + 1)
     return None
 
-def parse_bank_extract(bank_extract, conf, verbose=0):
+def parse_bank_extract(file_path, conf, verbose=0):
+    bank_extract = parse_pdf(file_path)
+
     data = conf.copy()
     data.pop('bank-pattern', None)
     if "account-pattern" in conf:
@@ -149,19 +162,14 @@ def parse_bank_extract(bank_extract, conf, verbose=0):
         print(conf)
     return data
 
-def aggregate_pdf(pdf_path, confs_path="./confs", verbose=0):
+
+def aggregate_pdf(file_path, confs_path="./confs", verbose=0):
     accounts = collections.defaultdict(lambda: collections.defaultdict(dict))
 
-    [stem, ext] = os.path.splitext(pdf_path)
-    if ext != '.pdf':
-        return accounts
-    pdf_contents = tika.parser.from_file(pdf_path)
-    bank_extract = pdf_contents['content']
-
     data = None
-    conf = find_conf(bank_extract, confs_path, verbose) if bank_extract else None
+    conf = find_conf(file_path, confs_path, verbose)
     if conf is not None:
-        data = parse_bank_extract(bank_extract, conf, verbose)
+        data = parse_bank_extract(file_path, conf, verbose)
     if data is None:
         print(pdf_path, "skipped")
     else:
