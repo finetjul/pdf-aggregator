@@ -64,9 +64,18 @@
     "bank-pattern": "BPCE Vie",
     "account-type": "life-insurance",
     "account-pattern": "Votre contrat : (.*)",
-    "account-value": "Assurance Vie: {}",
     "balance-pattern": "Montant de votre épargne au \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d : ([\\d ]+)\\,(\\d{2}) EUR",
     "date-pattern": "Montant de votre épargne au (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
+    "currency": "€"
+  },
+  "Parts sociales": {
+    "bank-name": "BPLC",
+    "bank-pattern": "Banque Populaire",
+    "account-type": "saving",
+    "account-pattern": "PARTS SOCIALES ORDINAIRES (\\d{9})",
+    "account-value": "Parts sociales {}",
+    "balance-pattern": "PARTS SOCIALES ORDINAIRES \\d{9} ([\\d ]+)\\,(\\d{2})",
+    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
     "currency": "€"
   }
 }

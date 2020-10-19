@@ -4,6 +4,7 @@
     "bank-pattern": "NEXT PATRIMOINE",
     "account-type": "life-insurance",
     "account-pattern": "Contrat\\s:\\sVersion\\s(.*)",
+    "account-value": "UAF Life {}",
     "balance-pattern": "Le montant de votre épargne atteinte au  s'élève à \\d\\d/\\d\\d/\\d\\d\\d\\d ([\\d\\s]+),(\\d\\d)",
     "date-pattern": "Le montant de votre épargne atteinte au  s'élève à (\\d\\d)/(\\d\\d)/(\\d\\d\\d\\d)",
     "currency": "€"
