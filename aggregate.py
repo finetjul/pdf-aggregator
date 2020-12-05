@@ -130,7 +130,7 @@ def parse_bank_extract(file_path, conf, verbose=0):
             balance_value = conf.get("balance-value", "{}.{}").format(*balance[-1])
             data['balance'] = float(re.sub(r"\s+", '', balance_value))
         elif verbose > 0:
-            print("balance not found", bank_extract)
+            print(os.path.basename(file_path), data['account'], "balance not found", bank_extract)
         data.pop('balance-pattern', None)
         data.pop('balance-value', None)
     elif "credit-pattern" in conf:
@@ -175,7 +175,7 @@ def aggregate_pdf(file_path, confs_path="./confs", verbose=0):
         data = parse_bank_extract(file_path, conf, verbose)
         if data is not None and 'date' in data and 'balance' in data:
             if verbose > 0:
-                print(file_path, data['date'], data['balance'])
+                print(os.path.basename(file_path), data['date'], data['account'], data['balance'])
             account_id = "-".join([data['bank-name'], data['account']])
             account = accounts[account_id]['account']
             accounts[account_id]['balances'].update({
