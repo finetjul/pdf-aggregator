@@ -40,6 +40,30 @@ def readAccounts(accounts_path):
         accounts = fromJSON(accounts_file)
     return accounts
 
+def get_account_properties(accounts, account_id):
+    """ Return the account-type property of an account referenced by its id
+    Supports account redirection.
+    """
+    account = accounts.get(account_id, {}).get('account', None)
+    if not isinstance(account, dict):
+        account = accounts.get(account, {})
+    return account
+
+def get_account_balance(accounts, account_id, day):
+    """ Return the balance of an account for a given day."""
+    balances = accounts.get(account_id, {}).get('balances', None)
+    if balances is None:
+        return None
+    share = get_account_properties(accounts, account_id).get('share', 1)
+    sorted_balances = SortedDict((date, value * share) for date, value in balances.items())
+    if sorted_balances.keys()[0] > day:
+        return 0
+    index = sorted_balances.bisect(day)
+    # last value if day is after last account entry
+    index -= 1
+    key = sorted_balances.iloc[index]
+    return sorted_balances[key]
+
 account_types = ['checking', 'saving', 'life-insurance', 'loan', 'real-estate']
 
 def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False):
@@ -54,7 +78,7 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
             continue
 
         for account_id in accounts.keys():
-            act = accounts[account_id].get('account', {}).get('account-type')
+            act = get_account_properties(accounts, account_id).get('account-type')
             if act == account_type or (account_type == 'other' and
                act not in account_types and act not in ignored_categories):
                 grouped_accounts.setdefault(account_type, {})[account_id] = accounts[account_id]
@@ -75,9 +99,13 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
     for account_type in grouped_accounts.keys():
         account_index = 0
         for account_id in grouped_accounts[account_type]:
-            balances = accounts[account_id].get('balances', {})
 
-            share = accounts[account_id].get('account', {}).get('share', 1)
+            balances = accounts[account_id].get('balances', None)
+
+            if not balances:
+                continue
+
+            share = get_account_properties(accounts, account_id).get('share', 1)
             sorted_balances = SortedDict((date, value * share) for date, value in balances.items())
             grouped_balances.setdefault(account_type, {})[account_id] = sorted_balances
             sorted_dates.update(dict.fromkeys(sorted_balances.keys(), 0))
@@ -85,6 +113,7 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
             x, y = zip(*sorted_balances.items())
 
             if not stacked:
+                # todo some accounts may not have any balance
                 is_last_type = type_index == len(grouped_accounts) - 1
                 offset_sign = -1 if is_last_type else 1
                 color_index = type_index
@@ -93,7 +122,7 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
 
                 if len(grouped_accounts) > 1:
                     color_index /= (len(grouped_accounts) - 1)
-                print(color_index)
+
                 c = cm.rainbow(color_index)
 
                 plots += plt.plot(x, y, color=c, label=account_id)
@@ -105,9 +134,9 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
     last_day = sorted_dates.keys()[-1]
     for day in sorted_dates:
         all = []
-        for accounts in grouped_balances.values():
-            for account_id in accounts.keys():
-                balances = accounts[account_id]
+        for accts in grouped_balances.values():
+            for account_id in accts.keys():
+                balances = accts[account_id]
                 # 0 if day is before first account entry
                 if balances.keys()[0] <= day:
                     index = balances.bisect(day)
@@ -148,6 +177,20 @@ def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False
         plt.gca().yaxis.set_major_formatter(ticker.ScalarFormatter())
         plt.gca().yaxis.get_major_formatter().set_scientific(False)
 
+    for account_type in grouped_accounts.keys():
+        for account_id in grouped_accounts[account_type]:
+            events = accounts[account_id].get('events', {})
+            for event_day in events:
+                event = events[event_day]
+                event_type = event.get('type', 'point')
+                balance = event.get('balance', get_account_balance(accounts, account_id, event_day))
+                if event_type == 'line':
+                    plt.axvline(event_day)
+                elif event_type == 'point':
+                    plt.scatter([event_day], [balance], c='red')
+                if event.get('label'):
+                    plt.text(event_day, balance, event.get('label'))#,rotation=90)
+
     if not stacked:
         mplcursors.cursor().connect(
             "add", lambda sel: sel.annotation.set_text(sel.artist.get_label()))
@@ -168,8 +211,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("file_or_folder",
                         help="a json file or a folder containing json files")
-    parser.add_argument("--ignore", nargs="+", default=[],
-                        help="Account type to ignore (e.g. -i loan -i real-estate")
+    parser.add_argument("-i", "--ignore", action='append', default=[],
+                        help="Account type to ignore (e.g. -i loan -i real-estate)")
     parser.add_argument("--log", action="store_true",
                         help="Use log scale")
     parser.add_argument("--stack", action="store_true",
