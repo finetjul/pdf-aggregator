@@ -1,3 +1,4 @@
+import calendar
 import collections
 import datetime
 import dateutil.parser
@@ -11,6 +12,8 @@ import numpy
 import pathlib
 # Use SortedDict (instead of OrderedDict) to bisect
 from sortedcontainers import SortedDict
+from scipy import interpolate
+
 
 def fromJSON(accounts_file):
     def replace_keys(accounts):
@@ -36,9 +39,40 @@ def fromJSON(accounts_file):
 
 
 def readAccounts(accounts_path):
+    """
+    @return a dictionary where keys are account names
+    """
     with open(accounts_path, encoding='utf-8') as accounts_file:
         accounts = fromJSON(accounts_file)
     return accounts
+
+all_account_types={
+    'checking': {
+        'account': {
+            'color': 'royalblue'
+        }
+    }, 'saving': {
+        'account': {
+            'color': 'tomato'
+        }
+    }, 'life-insurance': {
+        'account': {
+            'color': 'olivedrab'
+        }
+    }, 'loan': {
+        'account': {
+            'color': 'gold'
+        }
+    }, 'real-estate': {
+        'account': {
+            'color': 'sandybrown'
+        }
+    }, 'other': {
+        'account': {
+            'color': 'silver'
+        }
+    }
+}
 
 def get_account_properties(accounts, account_id):
     """ Return the account-type property of an account referenced by its id
@@ -47,136 +81,261 @@ def get_account_properties(accounts, account_id):
     account = accounts.get(account_id, {}).get('account', None)
     if not isinstance(account, dict):
         account = accounts.get(account, {})
+    if account:
+        default_account = all_account_types.get(account.get('account-type'),{}).get('account', {})
+        account = {**default_account, **account}
     return account
 
-def get_account_balance(accounts, account_id, day):
+def toTimestamp(day):
+    return calendar.timegm(day.timetuple())
+
+def toTimestamps(days):
+    return [toTimestamp(d) for d in days]
+
+def get_balance(sorted_balances, day):
+    """
+    Return the balance for a given day. Existing or not.
+    Balance is Hermite interpolated.
+    """
+    days = toTimestamps(sorted_balances.keys())
+
+    # 1: Hermite interpolation:
+    if len(days) > 3 and toTimestamp(day) >= days[0] and toTimestamp(day) <= days[-1]:
+        f = interpolate.PchipInterpolator(days, sorted_balances.values())
+        return f(toTimestamp(day))
+
+    # 2: linear interpolation:
+    return numpy.interp(toTimestamp(day), days, sorted_balances.values(), 0)
+
+    # if sorted_balances.keys()[0] > day:
+    #     return 0
+    # index = sorted_balances.bisect(day)
+    # # last value if day is after last account entry
+    # index -= 1
+    # key = sorted_balances.iloc[index]
+    # return sorted_balances[key]
+
+def get_account_balance(accounts, account_id, day, *args, **kwargs):
     """ Return the balance of an account for a given day."""
-    balances = accounts.get(account_id, {}).get('balances', None)
-    if balances is None:
+    sorted_balances = get_account_balances(accounts, account_id, day, *args, **kwargs)
+    return get_balance(sorted_balances, day)
+
+def get_account_balances(accounts, account_id, currency=None):
+    """
+    Returns all the balances of the account.
+    Takes into account the `share` account property.
+
+    @param currency if not None, conversion is applied
+    @return a SortedDict of balances, None if no balance exist
+    """
+    balances = accounts[account_id].get('balances', None)
+    if not balances:
         return None
     share = get_account_properties(accounts, account_id).get('share', 1)
-    sorted_balances = SortedDict((date, value * share) for date, value in balances.items())
-    if sorted_balances.keys()[0] > day:
-        return 0
-    index = sorted_balances.bisect(day)
-    # last value if day is after last account entry
-    index -= 1
-    key = sorted_balances.iloc[index]
-    return sorted_balances[key]
+    sorted_balance = SortedDict((date, value * share) for date, value in balances.items())
+    no_change = get_account_properties(accounts, account_id).get('no_change', False)
+    if no_change:
+        first_day = sorted_balance.keys()[0]
+        first_balance = sorted_balance[first_day]
+        for day, balance in sorted_balance.items():
+            sorted_balance[day] = first_balance
+    return sorted_balance
 
-account_types = ['checking', 'saving', 'life-insurance', 'loan', 'real-estate']
+def get_accounts_balances(accounts, account_ids, *args, **kwargs):
+    """
+    Get balances of multiple accounts at once.
+    Returned values are not "sum" of all accounts but lists of each account balance
+    """
+    sorted_dates = SortedDict()
+    for account_id in account_ids:
+        sorted_balances = get_account_balances(accounts, account_id, *args, **kwargs)
+        if sorted_balances is None:
+            continue
+        sorted_dates.update(dict.fromkeys(sorted_balances.keys(), 0))
+    for day in sorted_dates:
+        balances = []
+        for account_id in account_ids:
+            balance = get_account_balance(accounts, account_id, day, *args, **kwargs)
+            balances.append(balance)
+        sorted_dates[day] = balances
+    return sorted_dates
 
-def plotAccounts(accounts, ignored_categories=[], log_scale=False, stacked=False):
-    # Stack do not work with loans:
-    if stacked:
-        ignored_categories.append('loan')
-    # Group accounts per account type
+def filter_accounts(accounts, account_types):
+    """
+    @return a new dictionary with accounts belonging to account_types
+    """
+    return {account_id:account for (account_id,account) in accounts.items()
+            if get_account_properties(accounts, account_id).get('account-type')
+            in account_types}
+
+def group_accounts(accounts, account_types=all_account_types.keys()):
+    """
+    Group accounts per account type
+    @return an ordered dict of input accounts grouped by account type.
+    """
     grouped_accounts = collections.OrderedDict()
     for account_type in [*account_types, 'other']:
-        if account_type in ignored_categories:
-            print(account_type, 'is ignored')
-            continue
-
         for account_id in accounts.keys():
             act = get_account_properties(accounts, account_id).get('account-type')
             if act == account_type or (account_type == 'other' and
-               act not in account_types and act not in ignored_categories):
+               act not in account_types):
                 grouped_accounts.setdefault(account_type, {})[account_id] = accounts[account_id]
+    return grouped_accounts
+
+def plot_balances(days, balances, end_day=None, smooth=False, *args, **kwargs):
+    """
+    @param end_day if not None, a day is added at the end with the same balance of the last day
+    @param smooth if True, apply 365 day smoothing window on balances
+    """
+    plotter = plt.plot
+    first_day = days[0]
+    last_day = days[-1]
+    day_range = (last_day-first_day).days
+    if len(days) < 4 or len(days) < 3 * day_range / 365:  # no more than semestrial balances
+        plotter(days, balances, *args, linestyle='None', marker='o', fillstyle='none', **kwargs)
+
+    if end_day is not None and last_day != end_day:
+        days = days + tuple([end_day])
+        balances = balances + tuple([balances[-1]])
+        last_day = days[-1]
+
+    # if get_account_properties(accounts, account_id).get('account-type') == 'other':
+    #     plotter = plt.step
+    #     kwargs['where']='post'
+
+
+    # return plotter(x, y, *args, **kwargs)
+    if len(days) > 3:
+        plot_range = [first_day + datetime.timedelta(days=d) for d in range(0, (last_day-first_day).days)]
+        # 1: linear:
+        # f2 = interpolate.interp1d(toTimestamps(x), y, kind='linear')
+        # x = plot_range
+        # y = f2(toTimestamps(plot_range))
+        # 2: Cubic spline:
+        # spl = interpolate.splrep(toTimestamps(x), y, s=1)
+        # x = plot_range
+        # y = interpolate.splev(toTimestamps(plot_range), spl)
+        # 3: Hermite interpolation
+        balances = interpolate.pchip_interpolate(toTimestamps(days), balances, toTimestamps(plot_range))
+        days = plot_range
+
+        window_len = 365
+        if smooth and len(balances) > window_len:
+            # w=numpy.ones(window_len,'d')  # moving average
+            # w=numpy.hanning(window_len)
+            w=numpy.hamming(window_len)
+            # w=numpy.blackman(window_len)
+            balances = numpy.convolve(balances, w/w.sum(), mode='same')
+
+    return plotter(days, balances, *args, **kwargs)
+
+def plot_account(accounts, account_id, *args, **kwargs):
+    sorted_balances = get_account_balances(accounts, account_id)
+    if sorted_balances is None:
+        return None
+
+    days, balances = zip(*sorted_balances.items())
+
+    return plot_balances(days, balances, *args, **kwargs)
+
+def plot_accounts(accounts, ignored_categories=[], log_scale=False, stacked=False, total=True, subtotals=False, no_real_estate_appreciation=False):
+    # Stack do not work with negative balances
+    if stacked:
+        ignored_categories.append('loan')
+    account_types = [account_type for account_type in all_account_types.keys() if account_type not in ignored_categories]
+    not_ignored_accounts = filter_accounts(accounts, account_types)
+
+    # Group accounts per category type
+    # TODO: key=account_type, value=list of account ids
+    # {
+    #   'checking': {
+    #      'BNP-foo': {},
+    #      'BPLC-bar': {},
+    #   },
+    #   'saving': {
+    #      'LivretA': {},
+    #      'PEL': {},
+    #   },
+    # }
+    grouped_accounts = group_accounts(not_ignored_accounts)
+
+    if no_real_estate_appreciation:
+        all_account_types['real-estate']['account']['no_change'] = True
 
     plots = []
     labels = []
-    # {
-    #   'checking': {
-    #      'BNP-foo': {
-    #         '2020-01-01': 10,
-    #         '2020-02-01': 20,
-    #      }
-    #   }
-    # }
-    grouped_balances = collections.OrderedDict()
-    type_index = 0
-    sorted_dates = SortedDict()
-    for account_type in grouped_accounts.keys():
-        account_index = 0
-        for account_id in grouped_accounts[account_type]:
 
-            balances = accounts[account_id].get('balances', None)
+    # Compute total
+    total_balances = get_accounts_balances(accounts, not_ignored_accounts.keys())
+    last_day = total_balances.keys()[-1]
+    print('Total of {:.2f}€ on {}'.format(sum(total_balances[last_day]), last_day))
 
-            if not balances:
-                continue
+    # Plot accounts
+    if not stacked and not subtotals:
+        type_index = 0
+        for account_type in grouped_accounts.keys():
+            account_index = 0
+            for account_id in grouped_accounts[account_type]:
 
-            share = get_account_properties(accounts, account_id).get('share', 1)
-            sorted_balances = SortedDict((date, value * share) for date, value in balances.items())
-            grouped_balances.setdefault(account_type, {})[account_id] = sorted_balances
-            sorted_dates.update(dict.fromkeys(sorted_balances.keys(), 0))
-
-            x, y = zip(*sorted_balances.items())
-
-            if not stacked:
                 # todo some accounts may not have any balance
-                is_last_type = type_index == len(grouped_accounts) - 1
-                offset_sign = -1 if is_last_type else 1
-                color_index = type_index
-                if len(grouped_accounts[account_type]) > 1:
-                    color_index += offset_sign * 0.5 * account_index / (len(grouped_accounts[account_type])-1)
+                # is_last_type = type_index == len(grouped_accounts) - 1
+                # offset_sign = -1 if is_last_type else 1
+                # color_index = type_index
+                # if len(grouped_accounts[account_type]) > 1:
+                #     color_index += offset_sign * 0.5 * account_index / (len(grouped_accounts[account_type])-1)
 
-                if len(grouped_accounts) > 1:
-                    color_index /= (len(grouped_accounts) - 1)
+                # if len(grouped_accounts) > 1:
+                #     color_index /= (len(grouped_accounts) - 1)
 
-                c = cm.rainbow(color_index)
+                # c = cm.rainbow(color_index)
 
-                plots += plt.plot(x, y, color=c, label=account_id)
-            labels += [account_id]
-            account_index += 1
-        type_index += 1
+                c = get_account_properties(accounts, account_id).get('color', 'lightgrey')
 
-    # Total
-    last_day = sorted_dates.keys()[-1]
-    for day in sorted_dates:
-        all = []
-        for accts in grouped_balances.values():
-            for account_id in accts.keys():
-                balances = accts[account_id]
-                # 0 if day is before first account entry
-                if balances.keys()[0] <= day:
-                    index = balances.bisect(day)
-                    # last value if day is after last account entry
-                    index -= 1
-                    key = balances.iloc[index]
-                    all.append(balances[key])
-                    if day == last_day:
-                        print(account_id, balances[key])
-                #else:
-                #    all.append(None)
-        sorted_dates[day] = all if stacked else sum(all)
-        if day == last_day:
-            print('Total', sum(all))
+                plot = plot_account(accounts, account_id, end_day=last_day, color=c, label=account_id)
+                if plot:
+                    plots += plot
+                    labels += [account_id]
+                    account_index += 1
+            type_index += 1
+
+    if subtotals:
+        for account_type in grouped_accounts.keys():
+            group_balances = get_accounts_balances(accounts, grouped_accounts[account_type])
+            days, balances = zip(*group_balances.items())
+            c = get_account_properties(all_account_types, account_type).get('color', 'lightgrey')
+            plots += plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, color=c, label=account_type)
+            labels += [account_type]
+
+    # Plot total
     if stacked:
         fig, ax = plt.subplots()
-        number_of_accounts = len(next(iter(sorted_dates.values())))
+        number_of_accounts = len(next(iter(total_balances.values())))
         colors = cm.rainbow(numpy.linspace(0, 1, number_of_accounts))
-        values = list(map(list, zip(*sorted_dates.values())))
-        ax.stackplot(sorted_dates.keys(),
-                    list(map(list, zip(*sorted_dates.values()))),
+        values = list(map(list, zip(*total_balances.values())))
+        ax.stackplot(total_balances.keys(),
+                    list(map(list, zip(*total_balances.values()))),
                     labels=labels,
                     colors=colors)
     else:
-        # Total
-        x, y = zip(*sorted_dates.items())
-        plots += plt.plot(x, y, color='black', label='Total')
+        days, balances = zip(*total_balances.items())
+        plots += plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, color='dimgrey', label='Total')
         labels += ['Total']
-        grouped_balances['total'] = sorted_dates
+        plots += plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, smooth=True, color='black', linestyle='dashed', label='Smoothed Total')
+        labels += ['Smoothed Total']
 
+    # Plot legend
     if stacked:
         ax.legend(loc='upper left')
     else:
         plt.legend(plots, labels)
 
+    # Scale plot
     if log_scale:
         plt.yscale('symlog')
         plt.gca().yaxis.set_major_formatter(ticker.ScalarFormatter())
         plt.gca().yaxis.get_major_formatter().set_scientific(False)
 
+    # Plot events
     for account_type in grouped_accounts.keys():
         for account_id in grouped_accounts[account_type]:
             events = accounts[account_id].get('events', {})
@@ -217,6 +376,10 @@ if __name__ == "__main__":
                         help="Use log scale")
     parser.add_argument("--stack", action="store_true",
                         help="Stack accounts")
+    parser.add_argument("--subtotals", action="store_true",
+                        help="Plot totals per account type")
+    parser.add_argument("--no_real_estate_appreciation", action="store_true",
+                        help="If set, real_estate does not get appreciated")
 
     args = parser.parse_args()
 
@@ -231,4 +394,9 @@ if __name__ == "__main__":
                 if ext == '.json':
                     accounts.update(readAccounts(accounts_file_path))
 
-    plotAccounts(accounts, ignored_categories=args.ignore, log_scale=args.log, stacked=args.stack)
+    plot_accounts(accounts,
+                  ignored_categories=args.ignore,
+                  log_scale=args.log,
+                  stacked=args.stack,
+                  subtotals=args.subtotals,
+                  no_real_estate_appreciation=args.no_real_estate_appreciation)

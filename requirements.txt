@@ -1,4 +1,6 @@
 matplotlib
+mplcursors
 python-dateutil
+scipy
 sortedcontainers
 tika
