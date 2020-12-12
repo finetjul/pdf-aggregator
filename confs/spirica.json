@@ -1,0 +1,12 @@
+{
+  "Spirica": {
+    "bank-name": "Spirica",
+    "bank-pattern": "Advanced by Athymis",
+    "account-type": "life-insurance",
+    "account-pattern": "Votre numéro de contrat\\s:\\s(\\d*)",
+    "account-value": "Advanced by Athymis {}",
+    "balance-pattern": "Montant de la valeur atteinte au \\d\\d/\\d\\d/\\d\\d\\d\\d ([\\d\\s]+),(\\d\\d)",
+    "date-pattern": "Montant de la valeur atteinte au (\\d\\d)/(\\d\\d)/(\\d\\d\\d\\d)",
+    "currency": "€"
+  }
+}
