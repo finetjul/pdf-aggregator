@@ -1,9 +1,10 @@
 {
-  "BPLC": {
+  "CHECKING-monthly": {
     "bank-name": "BPLC",
     "bank-pattern": ["BANQUE POPULAIRE","Banque Populaire"],
     "account-type": "checking",
     "account-pattern": "VOTRE COMPTE CHEQUES N° (\\d*)",
+    "account-period": "monthly",
     "debit-pattern": [
       "([\\d ]+\\,\\d{2})SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*?",
       "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})"
@@ -12,6 +13,28 @@
       "([\\d ]+\\,\\d{2})SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*?",
       "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})"
     ],
+    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
+    "currency": "€"
+  },
+  "Parts sociales-monthly": {
+    "bank-name": "BPLC",
+    "bank-pattern": "Banque Populaire",
+    "account-type": "saving",
+    "account-pattern": "PARTS SOCIALES ORDINAIRES (\\d{9})",
+    "account-value": "Parts sociales {}",
+    "account-period": "monthly",
+    "balance-pattern": "PARTS SOCIALES ORDINAIRES \\d{9} ([\\d ]+)\\,(\\d{2})",
+    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
+    "currency": "€"
+  },
+  "COMPTE SUR LIVRET-monthly": {
+    "bank-name": "BPLC",
+    "bank-pattern": "Banque Populaire",
+    "account-type": "saving",
+    "account-pattern": "COMPTE SUR LIVRET (\\d*)",
+    "account-value": "COMPTE SUR LIVRET {}",
+    "account-period": "monthly",
+    "balance-pattern": "COMPTE SUR LIVRET \\d{11} ([\\d ]+)\\,(\\d{2})",
     "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
     "currency": "€"
   },
@@ -48,12 +71,12 @@
     "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
     "currency": "€"
   },
-  "Codevair": {
+  "COMPTE SUR LIVRET-annual": {
     "bank-name": "BPLC",
     "bank-pattern": "Banque Populaire",
     "account-type": "saving",
     "account-pattern": "VOTRE COMPTE SUR LIVRET N° (\\d*)",
-    "account-value": "Codevair",
+    "account-value": "COMPTE SUR LIVRET {}",
     "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
     "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
     "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
@@ -66,16 +89,6 @@
     "account-pattern": "Votre contrat : (.*)",
     "balance-pattern": "Montant de votre épargne au \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d : ([\\d ]+)\\,(\\d{2}) EUR",
     "date-pattern": "Montant de votre épargne au (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
-    "currency": "€"
-  },
-  "Parts sociales": {
-    "bank-name": "BPLC",
-    "bank-pattern": "Banque Populaire",
-    "account-type": "saving",
-    "account-pattern": "PARTS SOCIALES ORDINAIRES (\\d{9})",
-    "account-value": "Parts sociales {}",
-    "balance-pattern": "PARTS SOCIALES ORDINAIRES \\d{9} ([\\d ]+)\\,(\\d{2})",
-    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
     "currency": "€"
   }
 }

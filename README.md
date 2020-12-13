@@ -40,3 +40,9 @@ python plot.py path/to/accounts.json
 ```
 
 ```--help``` for more options.
+
+Example:
+
+```
+python.exe .\plot.py .\accounts\ --subtotals --no_real_estate_appreciation
+```
