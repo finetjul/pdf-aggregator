@@ -137,8 +137,10 @@ def get_account_balances(accounts, account_id, currency=None):
     if no_change:
         first_day = sorted_balance.keys()[0]
         first_balance = sorted_balance[first_day]
-        for day, balance in sorted_balance.items():
-            sorted_balance[day] = first_balance
+        sorted_balance.clear()
+        sorted_balance[first_day] = first_balance
+        #for day, balance in sorted_balance.items():
+        #    sorted_balance[day] = first_balance
     return sorted_balance
 
 def get_accounts_balances(accounts, account_ids, *args, **kwargs):
@@ -182,30 +184,30 @@ def group_accounts(accounts, account_types=all_account_types.keys()):
                 grouped_accounts.setdefault(account_type, {})[account_id] = accounts[account_id]
     return grouped_accounts
 
-def plot_balances(days, balances, end_day=None, smooth=False, *args, **kwargs):
+def plot_balances(days, balances, end_day=None, interpolation='hermite', smooth=False, *args, **kwargs):
     """
     @param end_day if not None, a day is added at the end with the same balance of the last day
-    @param smooth if True, apply 365 day smoothing window on balances
+    @param interpolation Specify how to draw between points: 'post', 'pre', 'mid', 'hermite' or 'linear'
+    @param smooth if True, apply 365 day smoothing window on balances. w
     """
     plotter = plt.plot
+
     first_day = days[0]
     last_day = days[-1]
     day_range = (last_day-first_day).days
     if len(days) < 4 or len(days) < 3 * day_range / 365:  # no more than semestrial balances
-        plotter(days, balances, *args, linestyle='None', marker='o', fillstyle='none', **kwargs)
+        plotter(days, balances, *args, linestyle='None', marker='o', alpha=0.5, **kwargs)
 
     if end_day is not None and last_day != end_day:
         days = days + tuple([end_day])
         balances = balances + tuple([balances[-1]])
         last_day = days[-1]
 
-    # if get_account_properties(accounts, account_id).get('account-type') == 'other':
-    #     plotter = plt.step
-    #     kwargs['where']='post'
-
-
-    # return plotter(x, y, *args, **kwargs)
-    if len(days) > 3:
+    if interpolation in ['post', 'pre', 'mid']:
+        # Could also use interpolate.interp1d
+        plotter = plt.step
+        kwargs['where'] = interpolation
+    elif interpolation == 'hermite' and len(days) > 3:
         plot_range = [first_day + datetime.timedelta(days=d) for d in range(0, (last_day-first_day).days)]
         # 1: linear:
         # f2 = interpolate.interp1d(toTimestamps(x), y, kind='linear')
@@ -303,7 +305,14 @@ def plot_accounts(accounts, ignored_categories=[], log_scale=False, stacked=Fals
             group_balances = get_accounts_balances(accounts, grouped_accounts[account_type])
             days, balances = zip(*group_balances.items())
             c = get_account_properties(all_account_types, account_type).get('color', 'lightgrey')
-            plots += plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, color=c, label=account_type)
+            interpolation = 'hermite'
+            if account_type == 'real-estate' and no_real_estate_appreciation:
+                interpolation = 'post'
+            plots += plot_balances(days, tuple(sum(b) for b in balances),
+                                   end_day=last_day,
+                                   interpolation=interpolation,
+                                   color=c,
+                                   label=account_type)
             labels += [account_type]
 
     # Plot total
