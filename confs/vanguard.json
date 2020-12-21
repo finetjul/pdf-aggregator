@@ -1,0 +1,12 @@
+{
+    "Vanguard": {
+      "bank-name": "Vanguard",
+      "bank-pattern": "Vanguard",
+      "account-type": "life-insurance",
+      "account-pattern": "Vanguard Brokerage[ Services]* [Aa]ccount—(\\d+)",
+      "balance-pattern": "Statement overview +\\$([\\d,]+)\\.(\\d\\d)",
+      "date-pattern": "Total value of all accounts as of (January|February|March|April|May|June|July|August|September|October|November|December) (\\d+), (\\d{4})",
+      "date-value": "{2}-{0}-{1}",
+      "currency": "$"
+    }
+  }

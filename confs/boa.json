@@ -1,0 +1,13 @@
+{
+  "BoA": {
+    "bank-name": "Bank of America",
+    "bank-pattern": "Bank of America",
+    "account-type": "checking",
+    "account-pattern": "Account number:\\s([\\d ]*)",
+    "balance-pattern": "Ending balance on (January|February|March|April|May|June|July|August|September|October|November|December) \\d+, \\d{4} \\$([\\d,.]+)",
+    "balance-value": "{1}",
+    "date-pattern": "Ending balance on (January|February|March|April|May|June|July|August|September|October|November|December) (\\d+), (\\d{4})",
+    "date-value": "{2}-{0}-{1}",
+    "currency": "$"
+  }
+}
