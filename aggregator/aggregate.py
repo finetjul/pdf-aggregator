@@ -101,10 +101,10 @@ def find_confs(file_path, confs_path, verbose=0):
             if all(searches):
                 matching_confs.append(conf)
                 continue
-            if verbose == 3:
+            if verbose >= 3:
                 print("************\n{}():  Conf does not match bank extract\n"
-                      "  Conf: {}\n  Search results: {}\n  Bank extract: {}".format(
-                    find_conf.__name__, conf, searches, bank_extract))
+                      "  Conf: {}\n  Search results: {}".format(
+                    find_confs.__name__, conf, searches))
     if len(matching_confs) == 0 and verbose == 2:
         matching_confs = find_confs(bank_extract, confs_path, verbose + 1)
     return matching_confs
@@ -128,7 +128,7 @@ def parse_bank_extract(file_path, conf, verbose=0):
         balance = findall(conf["balance-pattern"], bank_extract)
         if balance:
             balance_value = conf.get("balance-value", "{}.{}").format(*balance[-1])
-            data['balance'] = float(re.sub(r"\s+", '', balance_value))
+            data['balance'] = float(re.sub(r"[\s,]+", '', balance_value))
         elif verbose > 0:
             print(os.path.basename(file_path), data['account'], "balance not found", bank_extract)
         data.pop('balance-pattern', None)
@@ -136,9 +136,11 @@ def parse_bank_extract(file_path, conf, verbose=0):
     elif "credit-pattern" in conf:
         credit = findall(conf["credit-pattern"], bank_extract)
         if credit:
+            print('credit', credit)
             data['balance'] = float(re.sub(r"\s+", '', credit[-1]).replace(",", "."))
         elif "debit-pattern" in conf:
             debit = findall(conf["debit-pattern"], bank_extract)
+            print('debit', debit)
             if debit:
                 data['balance'] = -float(re.sub(r"\s+", '', debit[-1]).replace(",", "."))
             else:
@@ -184,6 +186,8 @@ def aggregate_pdf(file_path, confs_path="./confs", verbose=0):
             del data['date']
             del data['balance']
             account.update(data)
+        elif verbose >= 3:
+            print(data)
     if len(accounts) == 0:
         print(file_path, "skipped", file=sys.stderr)
     return accounts
@@ -203,8 +207,12 @@ def aggregate_pdfs(folder_path, confs_path="./confs", verbose=0):
     for root, dirs, files in os.walk(folder_path):
         for file in files:
             path_to_pdf = os.path.join(root, file)
-            pdf_accounts = aggregate_pdf(path_to_pdf, confs_path, verbose)
-            update(accounts, pdf_accounts)
+            try:
+                pdf_accounts = aggregate_pdf(path_to_pdf, confs_path, verbose)
+                update(accounts, pdf_accounts)
+            except Exception as inst:
+                print(path_to_pdf, inst)
+                raise inst
 
     return accounts
 
@@ -223,7 +231,7 @@ def toJSON(accounts):
     iso_accounts = replace_keys(accounts)
     return json.dumps(iso_accounts, indent = 2)
 
-if __name__ == "__main__":
+def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("file_or_folder",
@@ -234,15 +242,18 @@ if __name__ == "__main__":
                         default="accounts.json")
     parser.add_argument("-v", "--verbose", action="count", default=0,
                         help="increase output verbosity (0: none, 1: light...)")
-    parser.add_argument("--test", help="test regular expression on pdf (do not double backslash '\' here)")
+    parser.add_argument("--test", const='', nargs='?', help="test regular expression on pdf (do not double backslash '\' here)")
 
     args = parser.parse_args()
 
-    if args.test:
+    if args.test is not None:
         pdf_contents = tika.parser.from_file(args.file_or_folder)
         bank_extract = pdf_contents['content']
-        res = findall(args.test, bank_extract)
-        print("Apply '{}'\nResult: {}".format(args.test, res, bank_extract))
+        if args.test:
+            res = findall(args.test, bank_extract)
+            print("Apply '{}'\nResult: {}".format(args.test, res, bank_extract))
+        else:
+            print("Contents: {}".format(bank_extract))
     else:
         if pathlib.Path(args.file_or_folder).is_file():
             accounts = aggregate_pdf(args.file_or_folder, confs_path=args.confs, verbose=args.verbose)
@@ -255,3 +266,6 @@ if __name__ == "__main__":
 
         with open(args.output, 'w') as accounts_json_file:
             accounts_json_file.write(accounts_json)
+
+if __name__ == "__main__":
+    sys.exit(main())

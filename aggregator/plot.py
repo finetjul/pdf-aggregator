@@ -67,6 +67,11 @@ all_account_types={
         'account': {
             'color': 'sandybrown'
         }
+    },
+        'crowd-funding': {
+         'account': {
+            'color': 'green'
+        }
     }, 'other': {
         'account': {
             'color': 'silver'
@@ -240,7 +245,7 @@ def plot_account(accounts, account_id, *args, **kwargs):
 
     return plot_balances(days, balances, *args, **kwargs)
 
-def plot_accounts(accounts, ignored_categories=[], log_scale=False, stacked=False, total=True, subtotals=False, no_real_estate_appreciation=False):
+def plot_accounts(accounts, ignored_categories=[], log_scale=False, stacked=False, total=False, subtotals=False, no_real_estate_appreciation=False):
     # Stack do not work with negative balances
     if stacked:
         ignored_categories.append('loan')
@@ -271,6 +276,11 @@ def plot_accounts(accounts, ignored_categories=[], log_scale=False, stacked=Fals
     total_balances = get_accounts_balances(accounts, not_ignored_accounts.keys())
     last_day = total_balances.keys()[-1]
     print('Total of {:.2f}€ on {}'.format(sum(total_balances[last_day]), last_day))
+
+    if stacked:
+        fig, ax = plt.subplots()
+    else:
+        fig = plt.figure()
 
     # Plot accounts
     if not stacked and not subtotals:
@@ -316,27 +326,56 @@ def plot_accounts(accounts, ignored_categories=[], log_scale=False, stacked=Fals
             labels += [account_type]
 
     # Plot total
-    if stacked:
-        fig, ax = plt.subplots()
-        number_of_accounts = len(next(iter(total_balances.values())))
-        colors = cm.rainbow(numpy.linspace(0, 1, number_of_accounts))
-        values = list(map(list, zip(*total_balances.values())))
-        ax.stackplot(total_balances.keys(),
-                    list(map(list, zip(*total_balances.values()))),
-                    labels=labels,
-                    colors=colors)
-    else:
-        days, balances = zip(*total_balances.items())
-        plots += plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, color='dimgrey', label='Total')
-        labels += ['Total']
-        plots += plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, smooth=True, color='black', linestyle='dashed', label='Smoothed Total')
-        labels += ['Smoothed Total']
+    if total:
+        if stacked:
+            number_of_accounts = len(next(iter(total_balances.values())))
+            colors = cm.rainbow(numpy.linspace(0, 1, number_of_accounts))
+            values = list(map(list, zip(*total_balances.values())))
+            ax.stackplot(total_balances.keys(),
+                        list(map(list, zip(*total_balances.values()))),
+                        labels=labels,
+                        colors=colors)
+        else:
+            days, balances = zip(*total_balances.items())
+            plots += plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, color='dimgrey', label='Total')
+            labels += ['Total']
+            plots += plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, smooth=True, color='black', linestyle='dashed', label='Smoothed Total')
+            labels += ['Smoothed Total']
 
     # Plot legend
     if stacked:
-        ax.legend(loc='upper left')
+        legend = ax.legend(loc='upper left')
     else:
-        plt.legend(plots, labels)
+        legend = plt.legend(plots, labels)
+
+    lined = dict()
+    for legline, origline in zip(legend.get_lines(), plots):
+        legline.set_picker(5)  # 5 pts tolerance
+        lined[legline] = origline
+
+    def onpick(event):
+        # on the pick event, find the orig line corresponding to the
+        # legend proxy line, and toggle the visibility
+        legline = event.artist
+        origline = lined[legline]
+        if origline.get_linewidth() == 4:
+            origline.set_linewidth(1)
+            origline.set_visible(False)
+            origline.set_zorder(2)
+            legline.set_linewidth(1)
+            legline.set_alpha(0.2)
+        elif origline.get_visible():
+            origline.set_linewidth(4)
+            origline.set_zorder(200)
+            legline.set_linewidth(4)
+        else:
+            origline.set_visible(True)
+            legline.set_alpha(1.0)
+        # Change the alpha on the line in the legend so we can see what lines
+        # have been toggled
+        fig.canvas.draw()
+
+    fig.canvas.mpl_connect('pick_event', onpick)
 
     # Scale plot
     if log_scale:
@@ -372,7 +411,7 @@ def plot_accounts(accounts, ignored_categories=[], log_scale=False, stacked=Fals
     plt.show()
 
 
-if __name__ == "__main__":
+def main():
     import argparse
     import os
 
@@ -409,3 +448,6 @@ if __name__ == "__main__":
                   stacked=args.stack,
                   subtotals=args.subtotals,
                   no_real_estate_appreciation=args.no_real_estate_appreciation)
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,5 +1,5 @@
 {
-  "CHECKING-monthly": {
+  "Checking-monthly": {
     "bank-name": "BPLC",
     "bank-pattern": ["BANQUE POPULAIRE","Banque Populaire"],
     "account-type": "checking",
