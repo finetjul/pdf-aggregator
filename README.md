@@ -5,6 +5,7 @@ Aggregate account PDF statements into JSON and visualize aggregated financial da
 ![PDF aggregator](https://raw.githubusercontent.com/finetjul/pdf-aggregator/master/docs/pdf-aggregator.svg)
 
 Works offline and relies on [tika](https://tika.apache.org/) for PDF parsing and [matplotlib](https://matplotlib.org/) for plotting.
+It relies on regular expressions stored in simple configuration files to extract bank statements balance, date, account number...
 
 ## Installation
 
