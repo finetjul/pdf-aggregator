@@ -1,0 +1,13 @@
+{
+  "Boursorama": {
+    "bank-name": "Boursorama",
+    "bank-pattern": "Boursorama",
+    "account-type": "checking",
+    "account-pattern": "de compte",
+    "account-value": "compte chèque",
+    "balance-pattern": "SOLDE AU : +\\d{2}/\\d{2}/\\d{4}[ \\t]+([\\d \\.]+)\\,(\\d{2})",
+    "date-pattern": "SOLDE AU : +(\\d{2})\\/(\\d{2})\\/(\\d{4})",
+    "currency": "€",
+    "parser": "tika"
+  }
+}

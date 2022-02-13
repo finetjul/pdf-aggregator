@@ -6,15 +6,16 @@
     "account-pattern": "VOTRE COMPTE CHEQUES N° (\\d*)",
     "account-period": "monthly",
     "debit-pattern": [
-      "([\\d ]+\\,\\d{2})SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*?",
-      "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})"
+      "([\\d ]+)\\,(\\d{2})SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*?",
+      "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? +([\\d ]+)\\,(\\d{2})"
     ],
     "credit-pattern": [
-      "([\\d ]+\\,\\d{2})SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*?",
-      "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})"
+      "([\\d ]+)\\,(\\d{2})SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*?",
+      "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+)\\,(\\d{2})"
     ],
     "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
-    "currency": "€"
+    "currency": "€",
+    "parser": "tika"
   },
   "Parts sociales-monthly": {
     "bank-name": "BPLC",
@@ -25,18 +26,20 @@
     "account-period": "monthly",
     "balance-pattern": "PARTS SOCIALES ORDINAIRES \\d{9} ([\\d ]+)\\,(\\d{2})",
     "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
-    "currency": "€"
+    "currency": "€",
+    "parser": "tika"
   },
   "COMPTE SUR LIVRET-monthly": {
     "bank-name": "BPLC",
     "bank-pattern": "Banque Populaire",
     "account-type": "saving",
-    "account-pattern": "COMPTE SUR LIVRET (\\d*)",
+    "account-pattern": "COMPTE SUR LIVRET +(\\d+)",
     "account-value": "COMPTE SUR LIVRET {}",
     "account-period": "monthly",
     "balance-pattern": "COMPTE SUR LIVRET \\d{11} ([\\d ]+)\\,(\\d{2})",
     "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
-    "currency": "€"
+    "currency": "€",
+    "parser": "tika"
   },
   "CEL": {
     "bank-name": "BPLC",
@@ -44,10 +47,11 @@
     "account-type": "saving",
     "account-pattern": "VOTRE CPTE. EPARGNE LOGT.",
     "account-value": "CEL",
-    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
-    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+)\\,(\\d{2})",
+    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+)\\,(\\d{2})",
     "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
-    "currency": "€"
+    "currency": "€",
+    "parser": "tika"
   },
   "PEL": {
     "bank-name": "BPLC",
@@ -55,10 +59,11 @@
     "account-type": "saving",
     "account-pattern": "VOTRE PLAN EPARGNE LOGT",
     "account-value": "PEL",
-    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
-    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+)\\,(\\d{2})",
+    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+)\\,(\\d{2})",
     "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
-    "currency": "€"
+    "currency": "€",
+    "parser": "tika"
   },
   "LIVRET A": {
     "bank-name": "BPLC",
@@ -66,10 +71,17 @@
     "account-type": "saving",
     "account-pattern": "VOTRE LIVRET A N° (\\d*)",
     "account-value": "Livret A",
-    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
-    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
-    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
-    "currency": "€"
+    "debit-pattern": [
+      "([\\d ]+)\\,(\\d{2})SOLDE DEBITEUR AU \\d{2}\\/\\d{2}\\/\\d{4}\\*?",
+      "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? +([\\d ]+)\\,(\\d{2})"
+    ],
+    "credit-pattern": [
+      "([\\d ]+)\\,(\\d{2})SOLDE CREDITEUR AU \\d{2}\\/\\d{2}\\/\\d{4}\\*?",
+      "SOLDE CREDITEUR AU \\d{2}\\/\\d{2}\\/\\d{4}\\*? +([\\d ]+)\\,(\\d{2})"
+    ],
+    "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d{4})",
+    "currency": "€",
+    "parser": "tika"
   },
   "COMPTE SUR LIVRET-annual": {
     "bank-name": "BPLC",
@@ -77,18 +89,32 @@
     "account-type": "saving",
     "account-pattern": "VOTRE COMPTE SUR LIVRET N° (\\d*)",
     "account-value": "COMPTE SUR LIVRET {}",
-    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
-    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+\\,\\d{2})",
+    "debit-pattern": "SOLDE DEBITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+)\\,(\\d{2})",
+    "credit-pattern": "SOLDE CREDITEUR AU \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\*? ([\\d ]+)\\,(\\d{2})",
     "date-pattern": "SOLDE (?:DEBITEUR|CREDITEUR) AU (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
-    "currency": "€"
+    "currency": "€",
+    "parser": "tika"
   },
   "Assurance Vie": {
     "bank-name": "BPLC",
     "bank-pattern": "BPCE Vie",
     "account-type": "life-insurance",
-    "account-pattern": "Votre contrat : (.*)",
+    "account-pattern": "Votre contrat : (.*) Numéro d'adhésion : (\\w+)",
     "balance-pattern": "Montant de votre épargne au \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d : ([\\d ]+)\\,(\\d{2}) EUR",
     "date-pattern": "Montant de votre épargne au (\\d\\d)\\/(\\d\\d)\\/(\\d\\d\\d\\d)",
-    "currency": "€"
+    "operation-pattern": ["Votre versement complémentaire du \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d[ \\t]+([\\d ]+)\\,(\\d{2})","Votre prime exceptionnelle du \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d[ \\t]+([\\d ]+)\\,(\\d{2})"],
+    "currency": "€",
+    "parser": "tika"
+  },
+  "Assurance Vie-Relevé d'arbritrage": {
+    "bank-name": "BPLC",
+    "bank-pattern": "BPCE Vie",
+    "account-type": "life-insurance",
+    "account-pattern": "VOTRE CONTRAT (.*) N° (\\w+)",
+    "date-pattern": "NOUVELLE SITUATION DE .* AU (\\d\\d)\\.(\\d\\d)\\.(\\d\\d\\d\\d)",
+    "balance-pattern": "VALEUR TOTALE DE VOTRE CONTRAT[ \\t]+([\\d ]+)\\.([\\d ]+),(\\d{2}) €",
+    "balance-value": "{}{}.{}",
+    "currency": "€",
+    "parser": "tika"
   }
 }

@@ -19,13 +19,13 @@ pip install -r requirements.txt
 Scan PDF files and aggregate financial data into an accounts.json summary file:
 
 ```
-python aggregate.py path/to/folder/with/PDF
+python aggregator/aggregate.py path/to/folder/with/PDF
 ```
 
 or
 
 ```
-python aggregate.py path/to/file.pdf
+python aggregator/aggregate.py path/to/file.pdf
 ```
 
 ```--help``` for more options.
@@ -39,7 +39,7 @@ python aggregate.py path/to/PDF/file --test
 It should print out the content of the pdf. Then test regular expression:
 
 ```
-python aggregate.py path/to/PDF/file --test 'Ending balance on (\d+)/(\d+)/(\d+)
+python aggregate.py path/to/PDF/file --test 'Ending balance on (\d+)/(\d+)/(\d+)'
 ```
 
 You can then create conf file and test detection with -vvv:
@@ -67,5 +67,5 @@ python plot.py path/to/accounts.json
 Example:
 
 ```
-python.exe .\plot.py .\accounts\ --subtotals --no_real_estate_appreciation
+python.exe .\plot.py .\accounts\ --subtotals --real-estate operations
 ```
