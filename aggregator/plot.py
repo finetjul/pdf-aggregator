@@ -4,6 +4,7 @@ import datetime
 import dateutil.parser
 import json
 import functools
+import matplotlib as mpl
 import matplotlib.cm as cm
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -345,6 +346,105 @@ def plot_sorted_balances(sorted_balances, yearly=False, balance_operator=None, *
 
     return plot
 
+legend_elements = dict()
+def setup_picking(fig, legend, plots):
+    for legend_line, original_line in zip(legend.get_lines(), plots):
+        legend_line.set_picker(5)  # 5 pts tolerance
+        legend_elements[legend_line] = original_line
+    for legend_patch, plot in zip(legend.get_patches(), plots):
+        legend_patch.set_picker(5)  # 5 pts tolerance
+        legend_elements[legend_patch] = plot
+
+    def onpick(event):
+        # on the pick event, find the orig line corresponding to the
+        # legend proxy line, and toggle the visibility
+        legend_element = event.artist
+        picked_plot = legend_elements[legend_element]
+        picked_plots = picked_plot.get_children() if type(picked_plot) == mpl.container.BarContainer else [picked_plot]
+        artist_properties = {
+            mpl.lines.Line2D: [{
+                'plot': {
+                    'line_width': 1,
+                    'visible': True,
+                    'zorder': 2
+                },
+                'legend': {
+                    'line_width': 1,
+                    'alpha': None
+                }
+            },
+            {
+                'plot': {
+                    'line_width': 4,
+                    'visible': True,
+                    'zorder': 200
+                },
+                'legend': {
+                    'line_width': 4,
+                    'alpha': None
+                }
+            },
+            {
+                'plot': {
+                    'line_width': 1,
+                    'visible': False,
+                    'zorder': 2
+                },
+                'legend': {
+                    'line_width': 1,
+                    'alpha': 0.2
+                }
+            }],
+            mpl.container.BarContainer: [{
+                'plot': {
+                    'alpha': 1,
+                    'visible': True
+                },
+                'legend': {
+                    'alpha': None
+                }
+            },
+            {
+                'plot': {
+                    'alpha': 0.4,
+                    'visible': True
+                },
+                'legend': {
+                    'alpha': 0.3
+                }
+            },
+            {
+                'plot': {
+                    'alpha': 1,
+                    'visible': False,
+                },
+                'legend': {
+                    'alpha': 0.15
+                }
+            }]
+        }
+        artist_property = artist_properties[type(picked_plot)]
+        level = 0
+        for l in artist_property:
+            is_level = True
+            for prop, value in l['legend'].items():
+                is_level = is_level and getattr(legend_element, 'get_' + prop)() == value
+            if is_level:
+                break
+            level += 1
+        next_level = (level + 1) % 3
+        for prop, value in artist_property[next_level]['plot'].items():
+            for p in picked_plots:
+                getattr(p, 'set_' + prop)(value)
+        for prop, value in artist_property[next_level]['legend'].items():
+            getattr(legend_element, 'set_' + prop)(value)
+
+        # Change the alpha on the line in the legend so we can see what lines
+        # have been toggled
+        fig.canvas.draw()
+
+    fig.canvas.mpl_connect('pick_event', onpick)
+
 def plot_accounts_yearly(accounts, ignored_categories=[],
                   log_scale=False,
                   yearly="absolute",
@@ -393,7 +493,7 @@ def plot_accounts_yearly(accounts, ignored_categories=[],
                 #input = get_account_properties(accounts, account_id).get('input')
                 plot = plot_account(accounts, account_id, yearly=yearly, index=account_index, count=plot_count, color=c, label=account_id)
                 if plot:
-                    plots += plot
+                    plots.append(plot)
                     labels += [account_id]
                     account_index += 1
             type_index += 1
@@ -403,17 +503,20 @@ def plot_accounts_yearly(accounts, ignored_categories=[],
         last_day = total_balances.keys()[-1]
         print('Total of {:.2f}€ on {}'.format(sum(total_balances[last_day]), last_day))
 
-        plots += plot_sorted_balances(total_balances,
+        total_plot = plot_sorted_balances(total_balances,
                                       yearly=yearly,
                                       balance_operator=sum,
                                       index=plot_count-1,
                                       count=plot_count,
                                       color='dimgrey', label='Total')
+        plots.append(total_plot)
         labels += ['Total']
 
     # Plot legend
     #plt.legend(plots, labels)
-    plt.legend()
+    legend = plt.legend()
+
+    setup_picking(fig, legend, plots)
 
     # Scale plot
     if log_scale:
@@ -431,7 +534,6 @@ def plot_accounts_yearly(accounts, ignored_categories=[],
     #plt.gca().grid(True)
     plt.xlim(start, end)
     plt.show()
-
 
 def plot_accounts(accounts, ignored_categories=[],
                   log_scale=False, stacked=False, total=False, subtotals=False,
@@ -491,7 +593,7 @@ def plot_accounts(accounts, ignored_categories=[],
                     end_day=last_day, interpolation=interpolation, color=c, label=account_id)
                 if plot:
                     plots += plot
-                    labels += [account_id]
+                    labels.append(account_id)
                     account_index += 1
             type_index += 1
 
@@ -502,12 +604,13 @@ def plot_accounts(accounts, ignored_categories=[],
             c = get_account_properties(all_account_types, account_type).get('color', 'lightgrey')
             input = get_account_properties(all_account_types, account_type).get('input')
             interpolation = 'post' if input == 'operations' else 'hermite' 
-            plots += plot_balances(days, tuple(sum(b) for b in balances),
+            plot = plot_balances(days, tuple(sum(b) for b in balances),
                                    end_day=last_day,
                                    interpolation=interpolation,
                                    color=c,
                                    label=account_type)
-            labels += [account_type]
+            plots += plot
+            labels.append(account_type)
 
     # Plot total
     if total:
@@ -521,10 +624,12 @@ def plot_accounts(accounts, ignored_categories=[],
                         colors=colors)
         else:
             days, balances = zip(*total_balances.items())
-            plots += plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, color='dimgrey', label='Total')
-            labels += ['Total']
-            plots += plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, smooth=True, color='black', linestyle='dashed', label='Smoothed Total')
-            labels += ['Smoothed Total']
+            plot = plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, color='dimgrey', label='Total')
+            plots += plot
+            labels.append('Total')
+            plot = plot_balances(days, tuple(sum(b) for b in balances), end_day=last_day, smooth=True, color='black', linestyle='dashed', label='Smoothed Total')
+            plots += plot
+            labels.append('Smoothed Total')
 
     # Plot legend
     if stacked:
@@ -532,34 +637,7 @@ def plot_accounts(accounts, ignored_categories=[],
     else:
         legend = plt.legend(plots, labels)
 
-    lined = dict()
-    for legline, origline in zip(legend.get_lines(), plots):
-        legline.set_picker(5)  # 5 pts tolerance
-        lined[legline] = origline
-
-    def onpick(event):
-        # on the pick event, find the orig line corresponding to the
-        # legend proxy line, and toggle the visibility
-        legline = event.artist
-        origline = lined[legline]
-        if origline.get_linewidth() == 4:
-            origline.set_linewidth(1)
-            origline.set_visible(False)
-            origline.set_zorder(2)
-            legline.set_linewidth(1)
-            legline.set_alpha(0.2)
-        elif origline.get_visible():
-            origline.set_linewidth(4)
-            origline.set_zorder(200)
-            legline.set_linewidth(4)
-        else:
-            origline.set_visible(True)
-            legline.set_alpha(1.0)
-        # Change the alpha on the line in the legend so we can see what lines
-        # have been toggled
-        fig.canvas.draw()
-
-    fig.canvas.mpl_connect('pick_event', onpick)
+    setup_picking(fig, legend, plots)
 
     # Scale plot
     if log_scale:
