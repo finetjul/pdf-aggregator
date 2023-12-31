@@ -91,8 +91,8 @@ def parse_pdf_internal(file_path, parser_name): # miner_aggregate, tika
     pdf_text = unicodedata.normalize("NFKD", pdf)
     return pdf_text
 
-def parse_pdf(file_path, parser_name=None): # miner_aggregate, tika
-    return parse_pdf_internal(file_path, parser_name if parser_name is not None else 'miner_aggregate')
+def parse_pdf(file_path, parser_name=None): # miner_aggregate, tika, pdfplumber
+    return parse_pdf_internal(file_path, parser_name if parser_name is not None else 'pdfplumber')
 
 def is_valid_conf(conf, file_path, verbose):
     """Returns True if conf matches all mandatory patterns for given file"""
@@ -315,7 +315,8 @@ def main():
                         default="accounts.json")
     parser.add_argument("-v", "--verbose", action="count", default=0,
                         help="increase output verbosity (0: none, 1: light...)")
-    parser.add_argument("--test", const='', nargs='?', help="test regular expression on pdf (do not double backslash '\' here)")
+    parser.add_argument("--test", const='', nargs='?', help="test regular expression on pdf (do not double backslash '\\' here)."
+                        " Parsed document when no regular expression is given. ")
 
     args = parser.parse_args()
 

@@ -5,11 +5,11 @@
     "account-type": "checking",
     "account-pattern": "N° du Compte Courant : (\\d*)",
     "balance-pattern": [
-      "Nouveau solde au \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\n\\n(?:[\\d ]+\\,\\d{2}) ([\\d ]+)\\,(\\d{2})",
-      "Nouveau solde au \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d ([\\d ]+)\\,(\\d{2})"
+      "Nouveau solde au \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\s([\\d ]+)\\,(\\d{2})",
+      "Nouveau solde au \\d\\d\\/\\d\\d\\/\\d\\d\\d\\d\\sDébit.*Crédit.*,\\d{2} ([\\d ]+)\\,(\\d{2})\\n"
     ],
     "date-pattern": "Nouveau solde au (\\d{2})\\/(\\d{2})\\/(\\d{4})",
     "currency": "€",
-    "parser": "tika"
+    "parser": "pdfplumber"
   }
 }

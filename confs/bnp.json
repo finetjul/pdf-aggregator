@@ -6,6 +6,7 @@
     "account-pattern": "RIB : (.*)",
     "balance-pattern": "SOLDE CREDITEUR AU \\d\\d\\.\\d\\d\\.\\d\\d\\d\\d ([\\d ]+)\\,(\\d{2})",
     "date-pattern": "SOLDE CREDITEUR AU (\\d\\d)\\.(\\d\\d)\\.(\\d\\d\\d\\d)",
-    "currency": "€"
+    "currency": "€",
+    "parser": "tika"
   }
 }

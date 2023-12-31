@@ -36,7 +36,10 @@ def file_to_pdf_miner_text(file_path):
     for page in PDFPage.get_pages(fp):
         interpreter.process_page(page)
         data =  retstr.getvalue()
-        device.get_result()
+        try: # may fail for obscure reasons
+            device.get_result()
+        except:
+            pass
 
     return data
 
@@ -137,4 +140,12 @@ def file_to_pdf_miner_aggregate(file_path, merge = True):
     rows += '\t'.join(valuesInRow) + '\n'
     data = rows
 
+    return data
+
+def file_to_pdf_pdfplumber(file_path):
+    import pdfplumber
+    data = ""
+    with pdfplumber.open(file_path) as pdf:
+        for page in pdf.pages:
+            data += page.extract_text()
     return data
