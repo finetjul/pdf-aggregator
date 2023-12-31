@@ -27,7 +27,7 @@
       "bank-name": "BPLC",
       "account-type": "checking",
       "currency": "\u20ac",
-      "account": "111-222-333",
+      "account": "111-222-333"
     },
     "balances": {
       "2018-11-30": 1000.00,

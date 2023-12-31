@@ -6,17 +6,17 @@ import os
 import pathlib
 import re
 import sys
-import tika.parser
+import unicodedata
+
+try:
+    from parsers import file_to_pdf
+    from utils import memoize
+except ImportError:
+    from .parsers import file_to_pdf
+    from .utils import memoize
 
 debug = False
 
-def memoize(f):
-    memo = {}
-    def helper(x):
-        if x not in memo:
-            memo[x] = f(x)
-        return memo[x]
-    return helper
 
 @memoize
 def read_confs(conf_file_path):
@@ -36,8 +36,10 @@ def read_confs(conf_file_path):
     """
     with open(conf_file_path, encoding='utf-8') as conf_file:
         try:
-            conf = json.load(conf_file)
-        except:
+            conf_file_decoded = unicodedata.normalize("NFKD", conf_file.read())
+            conf = json.loads(conf_file_decoded)
+        except Exception as e:
+            print(read_confs.__name__, e)
             return None
         return conf
 
@@ -77,41 +79,73 @@ def findall(pattern, text):
         if match:
             return match
 
+
 @memoize
-def parse_pdf(file_path):
+def parse_pdf_internal(file_path, parser_name): # miner_aggregate, tika
     [stem, ext] = os.path.splitext(file_path)
     if ext != '.pdf':
         return None
-    pdf_contents = tika.parser.from_file(file_path)
-    return pdf_contents['content']
+    pdf = file_to_pdf(file_path, parser_name)
+    if pdf is None:
+        return None
+    pdf_text = unicodedata.normalize("NFKD", pdf)
+    return pdf_text
 
-def find_confs(file_path, confs_path, verbose=0):
-    bank_extract = parse_pdf(file_path)
-    matching_confs = []
+def parse_pdf(file_path, parser_name=None): # miner_aggregate, tika, pdfplumber
+    return parse_pdf_internal(file_path, parser_name if parser_name is not None else 'pdfplumber')
+
+def is_valid_conf(conf, file_path, verbose):
+    """Returns True if conf matches all mandatory patterns for given file"""
+    if "bank-name" not in conf is None:
+        return False
+    bank_extract = parse_pdf(file_path, conf.get('parser'))
     if not bank_extract:
-        return matching_confs
+        return False
+    searches = [search(conf[pattern], bank_extract)
+                for pattern in mandatory_patterns if pattern in conf]
+    if all(searches):
+        return True
+    if verbose >= 3:
+        print("************\n{}():  Conf does not match bank extract\n"
+                "  Conf: {}\n  Patterns: {}, Search results: {}".format(
+            find_confs.__name__, conf, mandatory_patterns, searches))
+    return False
+
+def find_confs(file_path, confs_path="./confs", verbose=0):
+    matching_confs = []
     for conf_file_path in get_conf_files(confs_path):
         confs = read_confs(conf_file_path)
         for conf_name in confs.keys():
             conf = confs[conf_name]
-            if "bank-name" not in conf is None:
-                continue
-            searches = [search(conf[pattern], bank_extract)
-                        for pattern in mandatory_patterns if pattern in conf]
-            if all(searches):
+            if is_valid_conf(conf, file_path, verbose):
                 matching_confs.append(conf)
-                continue
-            if verbose >= 3:
-                print("************\n{}():  Conf does not match bank extract\n"
-                      "  Conf: {}\n  Search results: {}".format(
-                    find_confs.__name__, conf, searches))
     if len(matching_confs) == 0 and verbose == 2:
-        matching_confs = find_confs(bank_extract, confs_path, verbose + 1)
+        matching_confs = find_confs(file_path, confs_path, verbose + 1)
     return matching_confs
 
-def parse_bank_extract(file_path, conf, verbose=0):
-    bank_extract = parse_pdf(file_path)
+def extract_pattern(pattern_name, conf, bank_extract, data):
+    res = None
+    extract = findall(conf.get(pattern_name+"-pattern"), bank_extract)
+    if extract:
+        #
+        last_extract = extract[-1]
+        captured_strings = last_extract if type(last_extract) else (last_extract)
+        # remove space, comma or dot in captured groups
+        captured_values = [re.sub(r"[\s,.]+", '', captured_string) for captured_string in captured_strings]
+        # guess the format
+        default_format = "{}" * (len(captured_values) - 1 ) + ".{}" if len(captured_values) > 1 else "{}"
+        # format captured groups
+        data_value = conf.get(pattern_name+"-value", default_format).format(*captured_values)
+        res = float(data_value)
+    data.pop(pattern_name + '-pattern', None)
+    data.pop(pattern_name + '-value', None)
+    return res
 
+def parse_bank_extract_file(file_path, conf, verbose=0):
+    bank_extract = parse_pdf(file_path, conf.get('parser'))
+    return parse_bank_extract(bank_extract, conf, verbose, file_path)
+
+def parse_bank_extract(bank_extract, conf, verbose=0, file_path = ""):
     data = conf.copy()
     data.pop('bank-pattern', None)
     if "account-pattern" in conf:
@@ -119,40 +153,62 @@ def parse_bank_extract(file_path, conf, verbose=0):
         if account:
             account_value = conf.get('account-value', "{}")
             data['account'] = account_value.format(*account.groups())
+        else:
+            print('SHOULD NOT HAPPEN', conf["account-pattern"])
         #data['account'] = re.sub(r"\s+", '', data['account'])
         data.pop('account-pattern', None)
         data.pop('account-value', None)
     elif verbose > 0:
         print('no account-pattern')
     if "balance-pattern" in conf:
-        balance = findall(conf["balance-pattern"], bank_extract)
-        if balance:
-            balance_value = conf.get("balance-value", "{}.{}").format(*balance[-1])
-            data['balance'] = float(re.sub(r"[\s,]+", '', balance_value))
+        # balance = findall(conf["balance-pattern"], bank_extract)
+        # if balance:
+        #     balance_value = conf.get("balance-value", "{}.{}").format(*balance[-1])
+        #     data['balance'] = float(re.sub(r"[\s,]+", '', balance_value))
+        # elif verbose > 0:
+        #     print(os.path.basename(file_path), data['account'], "balance not found", bank_extract)
+        # data.pop('balance-pattern', None)
+        # data.pop('balance-value', None)
+        balance = extract_pattern("balance", conf, bank_extract, data)
+        if balance is not None:
+            data['balance'] = balance
         elif verbose > 0:
-            print(os.path.basename(file_path), data['account'], "balance not found", bank_extract)
-        data.pop('balance-pattern', None)
-        data.pop('balance-value', None)
+            print(os.path.basename(file_path), "balance not found", data.get('account'))
+            if (verbose > 1):
+                print(os.path.basename(file_path), "extract", bank_extract)
+
     elif "credit-pattern" in conf:
-        credit = findall(conf["credit-pattern"], bank_extract)
-        if credit:
-            print('credit', credit)
-            data['balance'] = float(re.sub(r"\s+", '', credit[-1]).replace(",", "."))
+        credit = extract_pattern("credit", conf, bank_extract, data)
+        if credit is not None:
+            data['balance'] = credit
+            data.pop('debit-pattern', None)
+            data.pop('debit-value', None)
         elif "debit-pattern" in conf:
-            debit = findall(conf["debit-pattern"], bank_extract)
-            print('debit', debit)
-            if debit:
-                data['balance'] = -float(re.sub(r"\s+", '', debit[-1]).replace(",", "."))
-            else:
-                print("debit not found")
-        elif verbose > 0:
-            print("credit not found")
-        data.pop('credit-pattern', None)
-        data.pop('credit-value', None)
-        data.pop('debit-pattern', None)
-        data.pop('debit-value', None)
+            debit = extract_pattern("debit", conf, bank_extract, data)
+            if debit is not None:
+                data['balance'] = -debit
+                data.pop('credit-pattern', None)
+                data.pop('credit-value', None)
+        # credit = findall(conf["credit-pattern"], bank_extract)
+        # if credit:
+        #     print('credit', credit)
+        #     data['balance'] = float(re.sub(r"\s+", '', credit[-1]).replace(",", "."))
+        # elif "debit-pattern" in conf:
+        #     debit = findall(conf["debit-pattern"], bank_extract)
+        #     print('debit', debit)
+        #     if debit:
+        #         data['balance'] = -float(re.sub(r"\s+", '', debit[-1]).replace(",", "."))
+        #     else:
+        #         print("debit not found")
+        # elif verbose > 0:
+        #     print("credit not found")
+
     elif verbose > 0:
         print('no credit-pattern')
+    if "operation-pattern" in conf:
+        operation = extract_pattern("operation", conf, bank_extract, data)
+        if operation is not None:
+            data['operation'] = operation
     if "date-pattern" in conf:
         date = findall(conf["date-pattern"], bank_extract)
         if date:
@@ -167,31 +223,48 @@ def parse_bank_extract(file_path, conf, verbose=0):
         print(conf)
     return data
 
-
 def aggregate_pdf(file_path, confs_path="./confs", verbose=0):
+    if verbose > 0:
+        print(os.path.basename(file_path), end='...')
     accounts = collections.defaultdict(lambda: collections.defaultdict(dict))
-
     data = None
     confs = find_confs(file_path, confs_path, verbose)
     for conf in confs:
-        data = parse_bank_extract(file_path, conf, verbose)
-        if data is not None and 'date' in data and 'balance' in data:
+        data = parse_bank_extract_file(file_path, conf, verbose)
+        if data is not None and 'date' in data:
             if verbose > 0:
-                print(os.path.basename(file_path), data['date'], data['account'], data['balance'])
-            account_id = "-".join([data['bank-name'], data['account']])
-            account = accounts[account_id]['account']
-            accounts[account_id]['balances'].update({
-                data['date']: data['balance']
-            })
-            del data['date']
-            del data['balance']
-            account.update(data)
+                print(data['date'], end=' ')
+            if 'balance' in data:
+                if verbose > 0:
+                    print(data['account'], 'balance:', data['balance'])
+                account_id = "-".join([data['bank-name'], data['account']])
+                account = accounts[account_id]['account']
+                accounts[account_id]['balances'].update({
+                    data['date']: data['balance']
+                })
+                del data['balance']
+            if 'operation' in data:
+                if verbose > 0:
+                    print(data['account'], 'operation:', data['operation'])
+                account_id = "-".join([data['bank-name'], data['account']])
+                account = accounts[account_id]['account']
+                accounts[account_id]['operations'].update({
+                    data['date']: data['operation']
+                })
+                del data['operation']
+            if 'account' in locals():
+                del data['date']
+                account.update(data)
+            elif verbose > 0:
+                print('PDF failed to be parsed with conf', conf)
         elif verbose >= 3:
             print(data)
     if len(accounts) == 0:
+        print("skipped")
         print(file_path, "skipped", file=sys.stderr)
     return accounts
 
+#@cprofile
 def aggregate_pdfs(folder_path, confs_path="./confs", verbose=0):
 
     def update(d, u):
@@ -237,21 +310,22 @@ def main():
     parser.add_argument("file_or_folder",
                         help="a pdf file or a folder containing pdf files")
     parser.add_argument("-c", "--confs", help="folder to find conf files",
-                        default=os.path.join(os.path.dirname(os.path.realpath(__file__)), "confs"))
+                        default=os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "confs"))
     parser.add_argument("-o", "--output", help="output json file to store aggregated file",
                         default="accounts.json")
     parser.add_argument("-v", "--verbose", action="count", default=0,
                         help="increase output verbosity (0: none, 1: light...)")
-    parser.add_argument("--test", const='', nargs='?', help="test regular expression on pdf (do not double backslash '\' here)")
+    parser.add_argument("--test", const='', nargs='?', help="test regular expression on pdf (do not double backslash '\\' here)."
+                        " Parsed document when no regular expression is given. ")
 
     args = parser.parse_args()
 
     if args.test is not None:
-        pdf_contents = tika.parser.from_file(args.file_or_folder)
-        bank_extract = pdf_contents['content']
+        bank_extract = parse_pdf(args.file_or_folder)
         if args.test:
-            res = findall(args.test, bank_extract)
-            print("Apply '{}'\nResult: {}".format(args.test, res, bank_extract))
+            test = unicodedata.normalize("NFKD", args.test)
+            res = findall(test, bank_extract)
+            print("Apply '{}'\nResult: {}".format(test, res, bank_extract))
         else:
             print("Contents: {}".format(bank_extract))
     else:

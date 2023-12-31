@@ -12,17 +12,17 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/finetjul/pdf-aggregator",
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude=["tests"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: ISC License (ISCL)",
         "Operating System :: OS Independent",
     ],
     keywords='pdf aggregate extract banking financial statement',
-    # Define an executable calls dicom-anonymizer from a specific file
+    # Define an executable calls pdf-aggregator from a specific file
     entry_points={
         'console_scripts': [
-            'pdf-aggregator = aggregator.aggregate:main'
+            'pdf-aggregator = aggregator.aggregate:main',
             'pdf-plot = aggregator.plot:main'
         ]
     },

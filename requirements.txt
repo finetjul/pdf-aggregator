@@ -1,6 +1,8 @@
+cachetools
 matplotlib
 mplcursors
 python-dateutil
 scipy
 sortedcontainers
 tika
+PyQt5

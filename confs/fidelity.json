@@ -1,0 +1,14 @@
+{
+    "Fidelity": {
+      "bank-name": "Fidelity",
+      "bank-pattern": "Fidelity",
+      "account-type": "life-insurance",
+      "account-pattern": "401k PLAN",
+      "account-value": "401k",
+      "currency": "$",
+      "date-pattern": "Statement Period: \\d+/\\d+/\\d+ to (\\d+)/(\\d+)/(\\d{4})",
+      "date-value": "{2}-{0}-{1}",
+      "balance-pattern": "Ending Balance +\\$([\\d,]+)\\.(\\d\\d)\\n",
+      "operation-pattern": "Your Contributions +\\$([\\d,]+)\\.(\\d\\d)\\n"
+    }
+  }
