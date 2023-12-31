@@ -181,9 +181,9 @@ def get_account_balances(accounts, account_id, yearly=False, currency=None):
         else:
             sorted_operations = SortedDict()
             operation_first_day = datetime.datetime.max
+        # operation first day is optional, use balance in that case
         if sorted_balance:
             balance_first_day = sorted_balance.keys()[0]
-            # operation first day is optional
             if balance_first_day < operation_first_day:
                 sorted_operations[balance_first_day] = sorted_balance[balance_first_day]
             sorted_balance.clear()
@@ -219,6 +219,7 @@ def get_accounts_balances(accounts, account_ids, *args, **kwargs):
         if sorted_balances is None:
             continue
         sorted_dates.update(dict.fromkeys(sorted_balances.keys(), 0))
+
     # For each date, compute the balance for each accounts
     for day in sorted_dates:
         balances = []
@@ -274,7 +275,8 @@ def plot_balances(days, balances, end_day=None, interpolation='hermite', smooth=
     day_range = (last_day-first_day).days
     # draw markers
     if (len(days) < 4 or len(days) < 3 * day_range / 365):  # no more than semestrial balances
-        plotter(days, balances, *args, linestyle='None', marker='o', alpha=0.5, **kwargs)
+        markersArgs = {'linestyle':'None', 'marker': 'o', 'alpha': 0.5} | kwargs
+        plotter(days, balances, *args, **markersArgs)
 
     if end_day is not None and last_day != end_day:
         days = days + tuple([end_day])
@@ -364,34 +366,34 @@ def setup_picking(fig, legend, plots):
         artist_properties = {
             mpl.lines.Line2D: [{
                 'plot': {
-                    'line_width': 1,
+                    'linewidth': 1,  # line_width ?
                     'visible': True,
                     'zorder': 2
                 },
                 'legend': {
-                    'line_width': 1,
+                    'linewidth': 1,  # line_width ?
                     'alpha': None
                 }
             },
             {
                 'plot': {
-                    'line_width': 4,
+                    'linewidth': 4,  # line_width ?
                     'visible': True,
                     'zorder': 200
                 },
                 'legend': {
-                    'line_width': 4,
+                    'linewidth': 4,  # line_width ?
                     'alpha': None
                 }
             },
             {
                 'plot': {
-                    'line_width': 1,
+                    'linewidth': 1,  # line_width ?
                     'visible': False,
                     'zorder': 2
                 },
                 'legend': {
-                    'line_width': 1,
+                    'linewidth': 1,  # line_width ?
                     'alpha': 0.2
                 }
             }],
@@ -696,11 +698,15 @@ def main():
                         help="Plot total")
     parser.add_argument("--subtotals", action="store_true",
                         help="Plot totals per account type")
-    parser.add_argument("--no_real_estate_appreciation", action="store_true",
-                        help="If set, real_estate does not get appreciated")
+    # parser.add_argument("--no_real_estate_appreciation", action="store_true",
+    #                     help="If set, real_estate does not get appreciated")
     for account_type in all_account_types.keys():
         parser.add_argument("--" + account_type, choices=['balances', 'operations'],
-                            help="Consider true balance or I/O operations")
+                            help="Consider true balance or I/O operations. For a closing 'operations'"
+                             "(e.g. selling a real estate), please create a fake operation that adds"
+                             "capital gain the day before the day of the closing operation (that brings balance to 0)"
+                             "For example, if you buy a house 100K, and sell it 150K, you would then have 3"
+                             "operations: +100K, +50K, -150K")
     parser.add_argument("--start", type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d'),
                         help="Start plotting from given date")
     parser.add_argument("--end", type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d'),

@@ -53,13 +53,13 @@ python aggregate.py path/to/PDF/file -vvv
 Plot aggregated data:
 
 ```
-python plot.py path/to/folder/with/multiple/accounts.json
+python aggregator/plot.py path/to/folder/with/multiple/accounts.json
 ```
 
 or
 
 ```
-python plot.py path/to/accounts.json
+python aggregator/plot.py path/to/accounts.json
 ```
 
 ```--help``` for more options.
@@ -67,5 +67,5 @@ python plot.py path/to/accounts.json
 Example:
 
 ```
-python.exe .\plot.py .\accounts\ --subtotals --real-estate operations
+python.exe .\aggregator\plot.py .\accounts\ --subtotals --real-estate operations
 ```
