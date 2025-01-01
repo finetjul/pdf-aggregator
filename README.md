@@ -33,19 +33,19 @@ python aggregator/aggregate.py path/to/file.pdf
 ### Add a new config
 
 ```
-python aggregate.py path/to/PDF/file --test
+python aggregator/aggregate.py path/to/PDF/file --test
 ```
 
 It should print out the content of the pdf. Then test regular expression:
 
 ```
-python aggregate.py path/to/PDF/file --test 'Ending balance on (\d+)/(\d+)/(\d+)'
+python aggregator/aggregate.py path/to/PDF/file --test 'Ending balance on (\d+)/(\d+)/(\d+)'
 ```
 
 You can then create conf file and test detection with -vvv:
 
 ```
-python aggregate.py path/to/PDF/file -vvv
+python aggregator/aggregate.py path/to/PDF/file -vvv
 ```
 
 
@@ -67,5 +67,5 @@ python aggregator/plot.py path/to/accounts.json
 Example:
 
 ```
-python.exe .\aggregator\plot.py .\accounts\ --subtotals --real-estate operations
+python.exe .\aggregator\plot.py .\accounts\ --subtotals --total --real-estate operations --filter f-currency=$
 ```

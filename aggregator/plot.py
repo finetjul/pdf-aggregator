@@ -122,9 +122,13 @@ def get_balance(sorted_balances, day):
     """
     Return the balance for a given day. Existing or not.
     Balance is Hermite interpolated.
+    :return The balance. 0 if there is no sorted balances
+    :rtype float
     """
-    #print('get_balance', id(sorted_balances), day)
+    #print('get_balance', sorted_balances, day)
     days = toTimestamps(sorted_balances.keys())
+    if len(days) == 0:
+        return 0
 
     # 1: Hermite interpolation:
     if len(days) > 3 and toTimestamp(day) >= days[0] and toTimestamp(day) <= days[-1]:
@@ -151,6 +155,7 @@ def get_yearly_balance(sorted_balances, day):
 
 def get_account_balance(accounts, account_id, day, *args, **kwargs):
     """ Return the balance of an account for a given day."""
+    #print('get_account_balance', account_id)
     sorted_balances = get_account_balances(accounts, account_id, *args, **kwargs)
     balance_at_day = get_balance(sorted_balances, day)
     return balance_at_day
@@ -229,13 +234,45 @@ def get_accounts_balances(accounts, account_ids, *args, **kwargs):
         sorted_dates[day] = balances
     return sorted_dates
 
-def filter_accounts(accounts, account_types):
+def filter_account(account, account_filters = []):
     """
-    @return a new dictionary with accounts belonging to account_types
+    :param account_filters: a list of dictionaries, each containing the filter to apply.
+     Each dictionary should have the following structure:
+        {
+            'condition': bool,
+            'key': str,
+            'value': any
+        }
+    :type account_filters: list of dict
+    :return True if account matches at least one filter
+    :rtype bool
+    :example
+        # Returns True only if the account is a checking account not in USD:
+        filter_account(account, [{'condition': True, 'key': 'account-type', 'value': 'checking'}, {'condition': False, 'key': 'currency', 'value': '$'}, ])
+        # Returns True if account is not in USD or if a checking account:
+        filter_account(account, [{'condition': False, 'key': 'currency', 'value': '$'}, {'condition': True, 'key': 'account-type', 'value': 'checking'}])
+        # Returns False if account is not in USD or if it is a checking account, True otherwise:
+        filter_account(account, [{'condition': False, 'key': 'currency', 'value': '$'}, {'condition': False, 'key': 'account-type', 'value': 'checking'}])
+    """
+    reject = False
+    for account_filter in account_filters:
+        if account_filter['condition']:
+            if account.get(account_filter['key']) != account_filter['value']:
+                return False
+            else:
+                reject = False
+        else:
+            if account.get(account_filter['key']) == account_filter['value']:
+                reject = True
+    return not reject
+
+def filter_accounts(accounts, account_filters = []):
+    """
+    :return a new dictionary with accounts belonging to account_types
+    :rtype dict
     """
     return {account_id:account for (account_id,account) in accounts.items()
-            if get_account_properties(accounts, account_id).get('account-type')
-            in account_types}
+            if filter_account(get_account_properties(accounts, account_id), account_filters)}
 
 def group_accounts(accounts, account_types=all_account_types.keys()):
     """
@@ -325,7 +362,7 @@ def plot_account(accounts, account_id, *args, **kwargs):
     return plot_sorted_balances(sorted_balances, *args, **kwargs)
 
 def plot_sorted_balances(sorted_balances, yearly=False, balance_operator=None, *args, **kwargs):
-    if sorted_balances is None:
+    if sorted_balances is None or len(sorted_balances) == 0:
         return None
     if balance_operator:
         for day in sorted_balances.keys():
@@ -447,15 +484,19 @@ def setup_picking(fig, legend, plots):
 
     fig.canvas.mpl_connect('pick_event', onpick)
 
-def plot_accounts_yearly(accounts, ignored_categories=[],
-                  log_scale=False,
-                  yearly="absolute",
-                  total=False,
-                  subtotals=False,
-                  account_input_types={}, #no_real_estate_appreciation=False,
-                  start=None, end=None):
-    account_types = [account_type for account_type in all_account_types.keys() if account_type not in ignored_categories]
-    not_ignored_accounts = filter_accounts(accounts, account_types)
+def plot_accounts_yearly(accounts,
+                         account_filters=[],
+                         log_scale=False,
+                         yearly="absolute",
+                         total=False,
+                         subtotals=False,
+                         account_input_types={}, #no_real_estate_appreciation=False,
+                         start=None, end=None):
+    """
+    :param account_filters: a list of dictionaries, each containing the filter to apply. See filter_account for more details.
+    :type account_filters: list of dict
+    """
+    not_ignored_accounts = filter_accounts(accounts, account_filters)
     not_ignored_accounts_count = len(not_ignored_accounts)
     grouped_accounts = group_accounts(not_ignored_accounts)
 
@@ -537,15 +578,14 @@ def plot_accounts_yearly(accounts, ignored_categories=[],
     plt.xlim(start, end)
     plt.show()
 
-def plot_accounts(accounts, ignored_categories=[],
+def plot_accounts(accounts, account_filters=[],
                   log_scale=False, stacked=False, total=False, subtotals=False,
                   account_input_types={}, #no_real_estate_appreciation=False,
                   start=None, end=None):
     # Stack do not work with negative balances
     if stacked:
         ignored_categories.append('loan')
-    account_types = [account_type for account_type in all_account_types.keys() if account_type not in ignored_categories]
-    not_ignored_accounts = filter_accounts(accounts, account_types)
+    not_ignored_accounts = filter_accounts(accounts, account_filters)
 
     grouped_accounts = group_accounts(not_ignored_accounts)
 
@@ -685,8 +725,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("file_or_folder", nargs='+',
                         help="one or multiple json files or folders containing json files")
-    parser.add_argument("-i", "--ignore", action='append', default=[],
-                        help="Account type to ignore (e.g. -i loan -i real-estate)")
+    # parser.add_argument("-i", "--ignore", action='append', default=[],
+    #                     help="Account type to ignore (e.g. -i loan -i real-estate)")
     parser.add_argument("--log", action="store_true",
                         help="Use log scale")
     parser.add_argument("--stack", action="store_true",
@@ -712,7 +752,26 @@ def main():
     parser.add_argument("--end", type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d'),
                         help="Stop plotting at given date")
 
+    parser.add_argument("--filter", action='append',
+                        help='Consider or reject specific accounts in the format ±key=value. E.g. --filter f+account-type=loan --filter f-currency=$ to consider only loans not in USD',
+                        default=[])
     args = parser.parse_args()
+
+    account_filters = []
+    for item in args.filter:
+        condition = item[:2]
+        item = item[2:]
+        if condition not in ['f+', 'f-']:
+            raise ValueError('Filter must start with f+ or f-', condition)
+        else:
+            condition = condition == 'f+' # True if f+, False if f-
+        key, value = item.split('=')
+        account_filters.append(
+            {
+                'condition': condition,
+                'key': key,
+                'value': value
+            })
 
     accounts = {}
     for file_or_folder in args.file_or_folder:
@@ -730,14 +789,14 @@ def main():
     args_dict = vars(args)
     for account_type in all_account_types.keys():
         account_input_types[account_type] = args_dict.get(account_type.replace('-', '_'))
-    print(account_input_types)
+
     if args.yearly is None:
         args.yearly = 'absolute'
     elif args.yearly == 'no':
         args.yearly = False
     if args.yearly:
         plot_accounts_yearly(accounts,
-                  ignored_categories=args.ignore,
+                  account_filters=account_filters,
                   log_scale=args.log,
                   yearly=args.yearly,
                   total=args.total,
@@ -747,7 +806,7 @@ def main():
                   start=args.start, end=args.end)
     else:
         plot_accounts(accounts,
-                  ignored_categories=args.ignore,
+                  account_filters=account_filters,
                   log_scale=args.log,
                   stacked=args.stack,
                   total=args.total,
